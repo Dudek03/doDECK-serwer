@@ -7,8 +7,6 @@ import pygetwindow as gw
 import win32gui
 
 app = Flask(__name__)
-CORS(app)
-
 @app.route('/desktop', methods=['POST'])
 def desktop():
     try:
