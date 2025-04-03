@@ -1,12 +1,35 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_file
 import subprocess
 import keyboard
 from flask_cors import CORS  
+from PIL import Image, ImageOps
 import psutil
 import pygetwindow as gw
 import win32gui
 
 app = Flask(__name__)
+
+@app.route("/get-image-binary", methods=["GET"])
+def get_image():
+    return send_file("example.png", mimetype="image/png")
+
+def changeIconColor(imagePath, color): 
+  img = Image.open(f"{imagePath}.png").convert("L")  # Konwersja do skali szarości
+  img_colored = ImageOps.colorize(img, black=color, white="white")  # Zmiana czerni na niebieski
+
+  img_colored.save(f"{imagePath}_{color}.png")
+  
+def giveIconTexture(iconPath, texturePath):
+  icon = Image.open(f"{iconPath}.png").convert("L") 
+  texture = Image.open(f"{texturePath}.png").convert("RGBA") 
+
+  texture = texture.resize(icon.size)
+
+  result = Image.new("RGBA", icon.size)
+  result.paste(texture, (0, 0), mask=icon)
+
+  result.save(f"{iconPath}_{texturePath}.png")
+  
 @app.route('/desktop', methods=['POST'])
 def desktop():
     try:
@@ -32,7 +55,7 @@ def clip():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route('/getApp', methods=['GET'])
+'''@app.route('/getApp', methods=['GET'])
 def get_active_processes():
     def get_window_pid(hwnd):
         """Zwraca PID procesu dla danego uchwytu okna"""
@@ -54,7 +77,7 @@ def get_active_processes():
     print("Aplikacje na pasku zadań:")
     for title, pid in windows:
         process_name = processes.get(pid, "Unknown")
-        print(f"{process_name} (PID: {pid}) - {title}")
+        print(f"{process_name} (PID: {pid}) - {title}")'''
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5000)
