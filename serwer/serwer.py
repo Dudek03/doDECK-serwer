@@ -4,7 +4,7 @@ import keyboard
 from flask_cors import CORS  
 import psutil
 import pygetwindow as gw
-import win32gui
+#import win32gui
 
 app = Flask(__name__)
 @app.route('/desktop', methods=['POST'])
@@ -32,7 +32,7 @@ def clip():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route('/getApp', methods=['GET'])
+'''@app.route('/getApp', methods=['GET'])
 def get_active_processes():
     def get_window_pid(hwnd):
         """Zwraca PID procesu dla danego uchwytu okna"""
@@ -54,7 +54,11 @@ def get_active_processes():
     print("Aplikacje na pasku zadań:")
     for title, pid in windows:
         process_name = processes.get(pid, "Unknown")
-        print(f"{process_name} (PID: {pid}) - {title}")
+        print(f"{process_name} (PID: {pid}) - {title}")'''
+
+@app.route('/getCPUusage', method=['GET'])
+def getCPUUsage():
+    print(psutil.cpu_percent())
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5000)
