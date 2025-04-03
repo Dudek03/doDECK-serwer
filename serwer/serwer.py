@@ -7,26 +7,22 @@ import psutil
 
 app = Flask(__name__)
 
-@app.route("/get-image-binary", methods=["GET"])
-def get_image():
-    return send_file("example.png", mimetype="image/png")
-
 def changeIconColor(imagePath, color): 
-  img = Image.open(f"{imagePath}.png").convert("L")  # Konwersja do skali szarości
-  img_colored = ImageOps.colorize(img, black=color, white="white")  # Zmiana czerni na niebieski
-
+  img = Image.open(f"{imagePath}.png").convert("L")  
+  img_colored = ImageOps.colorize(img, black=color, white="white")  
   img_colored.save(f"{imagePath}_{color}.png")
   
 def giveIconTexture(iconPath, texturePath):
   icon = Image.open(f"{iconPath}.png").convert("L") 
   texture = Image.open(f"{texturePath}.png").convert("RGBA") 
-
   texture = texture.resize(icon.size)
-
   result = Image.new("RGBA", icon.size)
   result.paste(texture, (0, 0), mask=icon)
-
   result.save(f"{iconPath}_{texturePath}.png")
+
+@app.route("/get-image-binary", methods=["GET"])
+def get_image():
+    return send_file("example.png", mimetype="image/png")
   
 @app.route('/desktop', methods=['POST'])
 def desktop():
@@ -43,7 +39,6 @@ def mute():
         return jsonify({"message": "Toggled mute"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
 
 @app.route('/clip', methods=['POST'])
 def clip():
@@ -77,9 +72,20 @@ def get_active_processes():
         process_name = processes.get(pid, "Unknown")
         print(f"{process_name} (PID: {pid}) - {title}")'''
 
-@app.route('/getCPUusage', method=['GET'])
+@app.route('/getCPUusage', methods=['GET'])
 def getCPUUsage():
-    print(psutil.cpu_percent())
+    try:
+        cpuUsage = psutil.cpu_percent(interval=1, percpu=True)
+        return jsonify({'cpu usage': max(cpuUsage)}), 200
+    except Exception as e:
+        return jsonify({'error message: ': str(e)}), 500
+
+@app.route('/getRAMusage', methods=['GET'])
+def getRAMUsage():
+    try:
+        return jsonify({'RAM usage': psutil.virtual_memory().percent }), 200
+    except Exception as e:
+        return jsonify({'error message: ': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5000)
