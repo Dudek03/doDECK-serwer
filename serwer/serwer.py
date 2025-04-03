@@ -1,12 +1,33 @@
-from flask import Flask, jsonify, request
-import subprocess
+from flask import Flask, jsonify, request, send_file
 import keyboard
 from flask_cors import CORS  
+from PIL import Image, ImageOps
 import psutil
-import pygetwindow as gw
 #import win32gui
 
 app = Flask(__name__)
+
+@app.route("/get-image-binary", methods=["GET"])
+def get_image():
+    return send_file("example.png", mimetype="image/png")
+
+def changeIconColor(imagePath, color): 
+  img = Image.open(f"{imagePath}.png").convert("L")  # Konwersja do skali szarości
+  img_colored = ImageOps.colorize(img, black=color, white="white")  # Zmiana czerni na niebieski
+
+  img_colored.save(f"{imagePath}_{color}.png")
+  
+def giveIconTexture(iconPath, texturePath):
+  icon = Image.open(f"{iconPath}.png").convert("L") 
+  texture = Image.open(f"{texturePath}.png").convert("RGBA") 
+
+  texture = texture.resize(icon.size)
+
+  result = Image.new("RGBA", icon.size)
+  result.paste(texture, (0, 0), mask=icon)
+
+  result.save(f"{iconPath}_{texturePath}.png")
+  
 @app.route('/desktop', methods=['POST'])
 def desktop():
     try:
