@@ -3,6 +3,8 @@ import keyboard
 from flask_cors import CORS  
 from PIL import Image, ImageOps
 import psutil
+from pycaw.pycaw import AudioUtilities, ISimpleAudioVolume
+import comtypes
 #import win32gui
 
 app = Flask(__name__)
@@ -48,29 +50,39 @@ def clip():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-'''@app.route('/getApp', methods=['GET'])
-def get_active_processes():
-    def get_window_pid(hwnd):
-        """Zwraca PID procesu dla danego uchwytu okna"""
-        _, pid = win32gui.GetWindowThreadProcessId(hwnd)
-        return pid
+@app.route('/getAppsVolume', methods=['GET'])
+def getAudioVolume():
+    try:
+        comtypes.CoInitialize()
+        apps = []
+        sessions = AudioUtilities.GetAllSessions()
 
-    windows = []
-    def enum_window_callback(hwnd, _):
-        if win32gui.IsWindowVisible(hwnd): 
-            title = win32gui.GetWindowText(hwnd)
-            if title:
-                pid = get_window_pid(hwnd)
-                windows.append((title, pid))
+        for session in sessions:
+            if session.Process:
+                try:
+                    volume = session._ctl.QueryInterface(ISimpleAudioVolume)
+                    app_name = session.Process.name()
+                    volume_level = volume.GetMasterVolume()
+                    muted = volume.GetMute()
+                    if muted == 0:
+                        apps.append({
+                            "App": app_name,
+                            "Volume": round(volume_level * 100),
+                            "isMuted": muted
+                        })
+                except Exception as inner_e:
+                    print(f"[WARN] error: {inner_e}")
+                    continue
 
-    win32gui.EnumWindows(enum_window_callback, None)
+        return jsonify({
+            "ilosc": len(apps),
+            "aplikacje": apps
+        }), 200
 
-    processes = {p.pid: p.name() for p in psutil.process_iter(['pid', 'name'])}
+    except Exception as outer_e:
+        print(f"[ERROR] Główny wyjątek: {outer_e}")
+        return jsonify({"error": str(outer_e)}), 500
 
-    print("Aplikacje na pasku zadań:")
-    for title, pid in windows:
-        process_name = processes.get(pid, "Unknown")
-        print(f"{process_name} (PID: {pid}) - {title}")'''
 
 @app.route('/getCPUusage', methods=['GET'])
 def getCPUUsage():
