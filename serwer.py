@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, send_file
+'''from flask import Flask, jsonify, request, send_file
 import keyboard
 from flask_cors import CORS  
 from PIL import Image, ImageOps
@@ -33,7 +33,7 @@ def giveIconTexture(iconPath, texturePath):
 def get_image():
     return send_file("example.png", mimetype="image/png")
   
-@app.route('/desktop', methods=['POST'])
+@app.route('/desktop', methods=['GET'])
 def desktop():
     try:
         keyboard.press_and_release('win+d')
@@ -219,4 +219,15 @@ def getRAMUsage():
         return jsonify({'error message: ': str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=5000)
+    app.run(host="0.0.0.0", port=5000)'''
+
+
+from flask import Flask
+from modules import blueprints
+
+app = Flask(__name__)
+for bp in blueprints:
+    app.register_blueprint(bp, url_prefix=f'/{bp.name}')
+
+if __name__ == '__main__':
+    app.run(host="0.0.0.0", port=5000, debug=True)
