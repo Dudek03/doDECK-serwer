@@ -1,0 +1,1 @@
+[{"id": "1", "title": "Pulpit", "color": "#1a1a1a", "type": "ACTION", "payload": {"command": "hotkey", "args": "win+d"}}, {"id": "4", "title": "Mixer Audio", "color": "#2ecc71", "type": "WIDGET", "payload": {"command": "open_mixer"}}]
