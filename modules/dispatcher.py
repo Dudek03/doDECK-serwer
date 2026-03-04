@@ -16,11 +16,32 @@ DEFAULT_LAYOUT = [
         "payload": {"command": "hotkey", "args": "win+d"},
     },
     {
-        "id": "4",
+        "id": "2",
         "title": "Mixer Audio",
         "color": "#2ecc71",
         "type": "WIDGET",
         "payload": {"command": "open_mixer"},
+    },
+    {
+        "id": "3",
+        "title": "ram usage",
+        "color": "#5865F2",
+        "type": "LIVE DATA",
+        "payload": {"sensor": "ram"},
+    },
+    {
+        "id": "4",
+        "title": "pliki",
+        "color": "#1a1a1a",
+        "type": "ACTION",
+        "payload": {"command": "hotkey", "args": "win+e"},
+    },
+    {
+        "id": "5",
+        "title": "onet",
+        "color": "#1a1a1a",
+        "type": "ACTION",
+        "payload": {"command": "open_url", "args": "https://www.onet.pl/"},
     },
 ]
 

@@ -4,7 +4,7 @@ import psutil
 system_bp = Blueprint("system", __name__)
 
 
-@system_bp.route("/getCPUUsage", methods=["GET"])
+@system_bp.route("/getSystemUsage", methods=["GET"])
 def getUsageData():
     try:
         cpuUsage = psutil.cpu_percent(interval=0.1, percpu=True)
