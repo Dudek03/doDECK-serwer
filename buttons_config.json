@@ -1,58 +1,100 @@
-[
-  {
-    "id": "1",
-    "title": "pulpit",
-    "color": "#1a1a1a",
-    "type": "ACTION",
-    "payload": { "command": "hotkey", "args": "win+d" }
-  },
-  {
-    "id": "2",
-    "title": "task-manager",
-    "color": "#1a1a1a",
-    "type": "ACTION",
-    "payload": { "command": "hotkey", "args": "ctrl+shift+esc" }
-  },
-  {
-    "id": "3",
-    "title": "Mixer Audio",
-    "color": "#2ecc71",
-    "type": "WIDGET",
-    "payload": { "command": "open_mixer" }
-  },
-  {
-    "id": "4",
-    "title": "ram usage",
-    "color": "#5865F2",
-    "type": "LIVE DATA",
-    "payload": { "sensor": "ram" }
-  },
-  {
-    "id": "5",
-    "title": "pliki",
-    "color": "#1a1a1a",
-    "type": "ACTION",
-    "payload": { "command": "hotkey", "args": "win+e" }
-  },
-  {
-    "id": "6",
-    "title": "onet",
-    "color": "#1a1a1a",
-    "type": "ACTION",
-    "payload": { "command": "open_url", "args": "https://www.onet.pl/" }
-  },
-  {
-    "id": "7",
-    "title": "prev",
-    "color": "#2ecc71",
-    "type": "ACTION",
-    "payload": { "command": "hotkey", "args": "left arrow" }
-  },
-  {
-    "id": "8",
-    "title": "next",
-    "color": "#2ecc71",
-    "type": "ACTION",
-    "payload": { "command": "hotkey", "args": "right arrow" }
-  }
-]
+{
+  "active_layout_id": "default",
+  "layouts": [
+    {
+      "id": "default",
+      "name": "Główny Panel",
+      "grid": { "columns": 4, "rows": 4 },
+      "buttons": [
+        {
+          "id": "1",
+          "title": "pulpit",
+          "color": "#1a1a1a",
+          "type": "ACTION",
+          "x": 1,
+          "y": 1,
+          "w": 1,
+          "h": 1,
+          "payload": { "command": "hotkey", "args": "win+d" }
+        },
+        {
+          "id": "2",
+          "title": "task-manager",
+          "color": "#1a1a1a",
+          "type": "ACTION",
+          "x": 2,
+          "y": 1,
+          "w": 1,
+          "h": 1,
+          "payload": { "command": "hotkey", "args": "ctrl+shift+esc" }
+        },
+        {
+          "id": "5",
+          "title": "pliki",
+          "color": "#1a1a1a",
+          "type": "ACTION",
+          "x": 3,
+          "y": 1,
+          "w": 1,
+          "h": 1,
+          "payload": { "command": "hotkey", "args": "win+e" }
+        },
+        {
+          "id": "6",
+          "title": "onet",
+          "color": "#1a1a1a",
+          "type": "ACTION",
+          "x": 4,
+          "y": 1,
+          "w": 1,
+          "h": 1,
+          "payload": { "command": "open_url", "args": "https://www.onet.pl/" }
+        },
+        {
+          "id": "3",
+          "title": "Mixer Audio",
+          "color": "#2ecc71",
+          "type": "WIDGET",
+          "x": 1,
+          "y": 2,
+          "w": 2,
+          "h": 1,
+          "payload": { "command": "open_mixer" }
+        },
+        {
+          "id": "4",
+          "title": "ram usage",
+          "color": "#5865F2",
+          "type": "LIVE DATA",
+          "x": 1,
+          "y": 3,
+          "w": 2,
+          "h": 2,
+          "payload": { "sensor": "ram" }
+        },
+        {
+          "id": "7",
+          "title": "prev",
+          "color": "#2ecc71",
+          "type": "ACTION",
+          "x": 3,
+          "y": 3,
+          "w": 1,
+          "h": 1,
+          "payload": { "command": "hotkey", "args": "left arrow" }
+        },
+        {
+          "id": "8",
+          "title": "next",
+          "color": "#2ecc71",
+          "type": "ACTION",
+          "x": 4,
+          "y": 3,
+          "w": 1,
+          "h": 1,
+          "payload": { "command": "hotkey", "args": "right arrow" }
+        }
+      ]
+    }
+  ]
+}
