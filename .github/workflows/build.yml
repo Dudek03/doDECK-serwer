@@ -1,0 +1,32 @@
+name: Build Backend (Windows EXE)
+
+on:
+  push:
+    branches: ["master"]
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Pobranie kodu
+        uses: actions/checkout@v4
+
+      - name: Instalacja środowiska Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalacja zależności
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller
+          pip install -r requirements.txt
+
+      - name: Kompilacja do EXE
+        run: pyinstaller --onefile --noconsole --name DoDeckServer serwer.py
+
+      - name: Udostępnienie pliku EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: dodeck-server-exe
+          path: dist/DoDeckServer.exe
