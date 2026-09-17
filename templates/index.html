@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>doDECK Web Panel</title>
+    <style>
+        body {
+            background-color: #0f0f0f;
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 { margin-bottom: 20px; }
+        
+        #grid-container {
+            display: grid;
+            gap: 10px;
+            width: 100%;
+            max-width: 800px; /* Maksymalna szerokość dla komputera */
+            aspect-ratio: 1 / 1; /* Utrzymuje kwadratowe proporcje */
+            background-color: #1a1a1a;
+            padding: 10px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+
+        .tile {
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: transform 0.1s, filter 0.2s;
+            text-transform: uppercase;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.2);
+        }
+
+        .tile:hover {
+            filter: brightness(1.2);
+            transform: scale(0.98);
+        }
+    </style>
+</head>
+<body>
+
+    <h1>doDECK - Web Panel</h1>
+    <div id="grid-container"></div>
+
+    <script>
+        // Ta funkcja pobiera układ i dynamicznie rysuje kafelki
+        async function loadLayout() {
+            try {
+                const response = await fetch('/dispatcher/get_layout');
+                const data = await response.json();
+                
+                // Znajdujemy aktywny profil
+                const activeProfile = data.layouts.find(l => l.id === data.active_layout_id) || data.layouts[0];
+                const gridConfig = activeProfile.grid;
+                const buttons = activeProfile.buttons;
+
+                const container = document.getElementById('grid-container');
+                
+                // Ustawiamy CSS Grid na podstawie JSONa (np. 4 kolumny, 4 wiersze)
+                container.style.gridTemplateColumns = `repeat(${gridConfig.columns}, 1fr)`;
+                container.style.gridTemplateRows = `repeat(${gridConfig.rows}, 1fr)`;
+
+                // Tworzymy kafelki
+                buttons.forEach(btn => {
+                    const div = document.createElement('div');
+                    div.className = 'tile';
+                    div.innerText = btn.title;
+                    div.style.backgroundColor = btn.color || '#333';
+                    
+                    // Pozycjonowanie CSS Grid na podstawie x, y, w, h
+                    div.style.gridColumn = `${btn.x} / span ${btn.w}`;
+                    div.style.gridRow = `${btn.y} / span ${btn.h}`;
+
+                    // Podpinamy kliknięcie (wysyła żądanie do API)
+                    div.onclick = async () => {
+                        if (btn.type === 'ACTION') {
+                            await fetch('/dispatcher/trigger', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ command: btn.payload.command, args: btn.payload.args })
+                            });
+                        }
+                    };
+                    
+                    container.appendChild(div);
+                });
+
+            } catch (error) {
+                console.error("Błąd ładowania układu:", error);
+                document.getElementById('grid-container').innerText = "Nie udało się załadować panelu.";
+            }
+        }
+
+        // Uruchamiamy od razu po załadowaniu strony
+        loadLayout();
+    </script>
+</body>
+</html>
