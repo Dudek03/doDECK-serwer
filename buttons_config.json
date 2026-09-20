@@ -1,100 +1,139 @@
 {
-  "active_layout_id": "default",
-  "layouts": [
-    {
-      "id": "default",
-      "name": "Główny Panel",
-      "grid": { "columns": 4, "rows": 4 },
-      "buttons": [
+    "active_layout_id": "default",
+    "layouts": [
         {
-          "id": "1",
-          "title": "pulpit",
-          "color": "#1a1a1a",
-          "type": "ACTION",
-          "x": 1,
-          "y": 1,
-          "w": 1,
-          "h": 1,
-          "payload": { "command": "hotkey", "args": "win+d" }
-        },
-        {
-          "id": "2",
-          "title": "task-manager",
-          "color": "#1a1a1a",
-          "type": "ACTION",
-          "x": 2,
-          "y": 1,
-          "w": 1,
-          "h": 1,
-          "payload": { "command": "hotkey", "args": "ctrl+shift+esc" }
-        },
-        {
-          "id": "5",
-          "title": "pliki",
-          "color": "#1a1a1a",
-          "type": "ACTION",
-          "x": 3,
-          "y": 1,
-          "w": 1,
-          "h": 1,
-          "payload": { "command": "hotkey", "args": "win+e" }
-        },
-        {
-          "id": "6",
-          "title": "onet",
-          "color": "#1a1a1a",
-          "type": "ACTION",
-          "x": 4,
-          "y": 1,
-          "w": 1,
-          "h": 1,
-          "payload": { "command": "open_url", "args": "https://www.onet.pl/" }
-        },
-        {
-          "id": "3",
-          "title": "Mixer Audio",
-          "color": "#2ecc71",
-          "type": "WIDGET",
-          "x": 1,
-          "y": 2,
-          "w": 2,
-          "h": 1,
-          "payload": { "command": "open_mixer" }
-        },
-        {
-          "id": "4",
-          "title": "ram usage",
-          "color": "#5865F2",
-          "type": "LIVE DATA",
-          "x": 1,
-          "y": 3,
-          "w": 2,
-          "h": 2,
-          "payload": { "sensor": "ram" }
-        },
-        {
-          "id": "7",
-          "title": "prev",
-          "color": "#2ecc71",
-          "type": "ACTION",
-          "x": 3,
-          "y": 3,
-          "w": 1,
-          "h": 1,
-          "payload": { "command": "hotkey", "args": "left arrow" }
-        },
-        {
-          "id": "8",
-          "title": "next",
-          "color": "#2ecc71",
-          "type": "ACTION",
-          "x": 4,
-          "y": 3,
-          "w": 1,
-          "h": 1,
-          "payload": { "command": "hotkey", "args": "right arrow" }
+            "buttons": [
+                {
+                    "color": "#1a1a1a",
+                    "h": 1,
+                    "id": "1",
+                    "payload": {
+                        "args": "win+d",
+                        "command": "hotkey"
+                    },
+                    "title": "pulpit",
+                    "type": "ACTION",
+                    "w": 1,
+                    "x": 1,
+                    "y": 1
+                },
+                {
+                    "color": "#1a1a1a",
+                    "h": 1,
+                    "id": "2",
+                    "payload": {
+                        "args": "ctrl+shift+esc",
+                        "command": "hotkey"
+                    },
+                    "title": "task-manager",
+                    "type": "ACTION",
+                    "w": 1,
+                    "x": 2,
+                    "y": 1
+                },
+                {
+                    "color": "#1a1a1a",
+                    "h": 1,
+                    "id": "5",
+                    "payload": {
+                        "args": "win+e",
+                        "command": "hotkey"
+                    },
+                    "title": "pliki",
+                    "type": "ACTION",
+                    "w": 1,
+                    "x": 3,
+                    "y": 1
+                },
+                {
+                    "color": "#1a1a1a",
+                    "h": 1,
+                    "id": "6",
+                    "payload": {
+                        "args": "https://www.onet.pl/",
+                        "command": "open_url"
+                    },
+                    "title": "onet",
+                    "type": "ACTION",
+                    "w": 4,
+                    "x": 4,
+                    "y": 2
+                },
+                {
+                    "color": "#2ecc71",
+                    "h": 1,
+                    "id": "3",
+                    "payload": {
+                        "command": "open_mixer"
+                    },
+                    "title": "Mixer Audio",
+                    "type": "WIDGET",
+                    "w": 2,
+                    "x": 1,
+                    "y": 2
+                },
+                {
+                    "color": "#5865F2",
+                    "h": 2,
+                    "id": "4",
+                    "payload": {
+                        "sensor": "ram"
+                    },
+                    "title": "ram usage",
+                    "type": "LIVE DATA",
+                    "w": 2,
+                    "x": 1,
+                    "y": 3
+                },
+                {
+                    "color": "#2ecc71",
+                    "h": 1,
+                    "id": "7",
+                    "payload": {
+                        "args": "left arrow",
+                        "command": "hotkey"
+                    },
+                    "title": "prev",
+                    "type": "ACTION",
+                    "w": 1,
+                    "x": 3,
+                    "y": 2
+                },
+                {
+                    "color": "#2ecc71",
+                    "h": 1,
+                    "id": "8",
+                    "payload": {
+                        "args": "right arrow",
+                        "command": "hotkey"
+                    },
+                    "title": "next",
+                    "type": "ACTION",
+                    "w": 3,
+                    "x": 4,
+                    "y": 1
+                },
+                {
+                    "color": "#e67e22",
+                    "h": 1,
+                    "id": "1789897901979",
+                    "payload": {
+                        "args": "enter",
+                        "command": "hotkey"
+                    },
+                    "title": "NOWY",
+                    "type": "ACTION",
+                    "w": 1,
+                    "x": 7,
+                    "y": 1
+                }
+            ],
+            "grid": {
+                "columns": 4,
+                "rows": 4
+            },
+            "id": "default",
+            "name": "Główny Panel"
         }
-      ]
-    }
-  ]
+    ]
 }

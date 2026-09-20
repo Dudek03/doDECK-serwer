@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>doDECK Web Panel</title>
+    
+    <!-- Socket.IO -->
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+
     <style>
         body {
             background-color: #0f0f0f;
@@ -14,95 +18,273 @@
             display: flex;
             flex-direction: column;
             align-items: center;
+            user-select: none; /* Zapobiega zaznaczaniu tekstu podczas przeciągania */
         }
-        h1 { margin-bottom: 20px; }
+
+        .header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            max-width: 800px;
+            margin-bottom: 20px;
+        }
+
+        h1 { margin: 0; font-size: 1.8rem; }
+
+        .controls button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-left: 10px;
+            transition: 0.2s;
+        }
+
+        #edit-btn { background-color: #555; color: white; }
+        #edit-btn.active { background-color: #f39c12; color: black; }
+        #save-btn { background-color: #2ecc71; color: black; display: none; }
         
+        /* Kontener CSS Grid */
         #grid-container {
             display: grid;
             gap: 10px;
             width: 100%;
-            max-width: 800px; /* Maksymalna szerokość dla komputera */
-            aspect-ratio: 1 / 1; /* Utrzymuje kwadratowe proporcje */
+            max-width: 800px;
+            aspect-ratio: 1 / 1;
             background-color: #1a1a1a;
             padding: 10px;
             border-radius: 15px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            position: relative;
         }
 
+        /* Wygląd pojedynczego kafelka */
         .tile {
             border-radius: 10px;
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
             font-weight: bold;
             font-size: 1.2rem;
             cursor: pointer;
-            transition: transform 0.1s, filter 0.2s;
             text-transform: uppercase;
             box-shadow: inset 0 0 10px rgba(0,0,0,0.2);
+            text-align: center;
+            transition: filter 0.2s, transform 0.1s;
         }
 
-        .tile:hover {
-            filter: brightness(1.2);
-            transform: scale(0.98);
+        /* Reakcja na kliknięcie w trybie zwykłym */
+        body:not(.edit-mode) .tile:active { 
+            filter: brightness(0.8); 
+            transform: scale(0.98); 
         }
+
+        /* Wygląd w trybie edycji */
+        body.edit-mode .tile {
+            border: 2px dashed rgba(255, 255, 255, 0.7);
+            cursor: grab;
+        }
+        body.edit-mode .tile:active { 
+            cursor: grabbing; 
+            opacity: 0.8; 
+        }
+        
+        /* Modal Audio */
+        #audio-mixer-modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
+        .mixer-content { background: #2a2a2a; padding: 25px; border-radius: 15px; width: 90%; max-width: 400px; }
+        .volume-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .close-btn { margin-top: 20px; padding: 12px; background: #e74c3c; border: none; color: white; width: 100%; cursor: pointer; border-radius: 8px;}
     </style>
 </head>
 <body>
 
-    <h1>doDECK - Web Panel</h1>
+    <div class="header-bar">
+        <h1>doDECK Web</h1>
+        <div class="controls">
+            <button id="edit-btn" onclick="toggleEditMode()">Tryb Edycji</button>
+            <button id="save-btn" onclick="saveLayout()">Zapisz układ</button>
+        </div>
+    </div>
+
+    <!-- Pusty kontener, w którym JS narysuje siatkę -->
     <div id="grid-container"></div>
 
+    <div id="audio-mixer-modal">
+        <div class="mixer-content">
+            <h2 style="margin-top: 0; text-align: center;">Mixer Audio</h2>
+            <div id="apps-container"></div>
+            <button class="close-btn" onclick="document.getElementById('audio-mixer-modal').style.display = 'none'">Zamknij</button>
+        </div>
+    </div>
+
     <script>
-        // Ta funkcja pobiera układ i dynamicznie rysuje kafelki
+        const socket = io();
+        let fullLayoutData = {}; 
+        let activeButtons = [];
+        let isEditMode = false;
+        let draggedBtnId = null;
+
+        const container = document.getElementById('grid-container');
+
+        // --- Socket.IO (Telemetria i Audio) ---
+        socket.on('connect', () => socket.emit('subscribe_telemetry'));
+        
+        socket.on('system_update', (data) => {
+            const ram = document.getElementById('val-ram');
+            const cpu = document.getElementById('val-cpu');
+            if (ram) ram.innerText = `${data.ram}%`;
+            if (cpu) cpu.innerText = `${data.cpu}%`;
+        });
+
+        socket.on('audio_volume_data', (data) => {
+            const appBox = document.getElementById('apps-container');
+            appBox.innerHTML = ''; 
+            data.aplikacje.forEach(app => {
+                const row = document.createElement('div');
+                row.className = 'volume-row';
+                row.innerHTML = `<span style="flex:1">${app.App}</span><input type="range" min="0" max="100" value="${app.Volume}" style="flex:2" oninput="socket.emit('set_audio_volume', {app: '${app.App}', volume: this.value})">`;
+                appBox.appendChild(row);
+            });
+            document.getElementById('audio-mixer-modal').style.display = 'flex';
+        });
+
+        // --- Renderowanie Siatki ---
+        function renderGrid() {
+            container.innerHTML = ''; // Czyścimy przed każdym przerysowaniem
+            
+            const activeProfile = fullLayoutData.layouts.find(l => l.id === fullLayoutData.active_layout_id) || fullLayoutData.layouts[0];
+            const cols = activeProfile.grid.columns;
+            const rows = activeProfile.grid.rows;
+
+            // Ustawiamy wymiary siatki w kontenerze
+            container.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+            container.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+
+            activeButtons.forEach(btn => {
+                const div = document.createElement('div');
+                div.className = 'tile';
+                div.style.backgroundColor = btn.color || '#333';
+                
+                // Magia CSS Grid - ustawiamy współrzędne z JSON-a
+                div.style.gridColumn = `${btn.x} / span ${btn.w}`;
+                div.style.gridRow = `${btn.y} / span ${btn.h}`;
+                
+                // Zawartość kafelka
+                if (btn.type === 'LIVE DATA') {
+                    div.innerHTML = `${btn.title}<br><span id="val-${btn.payload.sensor}" style="font-size: 1.5rem;">...</span>`;
+                } else {
+                    div.innerText = btn.title;
+                }
+
+                // Obsługa kliknięć (aktywna tylko poza trybem edycji)
+                div.onclick = () => {
+                    if (isEditMode) return;
+                    if (btn.type === 'ACTION') socket.emit('trigger_action', { command: btn.payload.command, args: btn.payload.args || '' });
+                    else if (btn.type === 'WIDGET' && btn.payload.command === 'open_mixer') socket.emit('get_audio_volume');
+                };
+
+                // --- FIZYKA DRAG & DROP HTML5 ---
+                div.draggable = isEditMode; 
+                
+                div.ondragstart = (e) => {
+                    if (!isEditMode) {
+                        e.preventDefault();
+                        return;
+                    }
+                    draggedBtnId = btn.id;
+                    e.dataTransfer.effectAllowed = "move";
+                };
+
+                container.appendChild(div);
+            });
+        }
+
+        // --- Obsługa upuszczania na kontener ---
+        container.ondragover = (e) => {
+            if (isEditMode) e.preventDefault(); // Pozwala na upuszczenie
+        };
+        
+        container.ondrop = (e) => {
+            if (!isEditMode || !draggedBtnId) return;
+            e.preventDefault();
+
+            // Pobieramy rozmiary kontenera i aktywnego profilu
+            const rect = container.getBoundingClientRect();
+            const activeProfile = fullLayoutData.layouts.find(l => l.id === fullLayoutData.active_layout_id);
+            const cols = activeProfile.grid.columns;
+            const rows = activeProfile.grid.rows;
+
+            // Obliczamy wielkość pojedynczej komórki
+            const cellW = rect.width / cols;
+            const cellH = rect.height / rows;
+
+            // Wyliczamy nową pozycję na podstawie pozycji myszki nad kontenerem
+            let newX = Math.floor((e.clientX - rect.left) / cellW) + 1;
+            let newY = Math.floor((e.clientY - rect.top) / cellH) + 1;
+
+            // Znajdujemy kafelek i zabezpieczamy go przed wyrzuceniem poza ekran
+            const btn = activeButtons.find(b => b.id === draggedBtnId);
+            if (newX < 1) newX = 1;
+            if (newY < 1) newY = 1;
+            if (newX + btn.w - 1 > cols) newX = cols - btn.w + 1;
+            if (newY + btn.h - 1 > rows) newY = rows - btn.h + 1;
+
+            // Zmieniamy współrzędne w tablicy i przerysowujemy siatkę
+            btn.x = newX;
+            btn.y = newY;
+            renderGrid();
+        };
+
+        // --- Ładowanie i Zapis z Serwera ---
         async function loadLayout() {
             try {
-                const response = await fetch('/dispatcher/get_layout');
-                const data = await response.json();
+                const res = await fetch('/dispatcher/get_layout');
+                if (!res.ok) throw new Error(`Błąd sieci: ${res.status}`);
                 
-                // Znajdujemy aktywny profil
-                const activeProfile = data.layouts.find(l => l.id === data.active_layout_id) || data.layouts[0];
-                const gridConfig = activeProfile.grid;
-                const buttons = activeProfile.buttons;
-
-                const container = document.getElementById('grid-container');
-                
-                // Ustawiamy CSS Grid na podstawie JSONa (np. 4 kolumny, 4 wiersze)
-                container.style.gridTemplateColumns = `repeat(${gridConfig.columns}, 1fr)`;
-                container.style.gridTemplateRows = `repeat(${gridConfig.rows}, 1fr)`;
-
-                // Tworzymy kafelki
-                buttons.forEach(btn => {
-                    const div = document.createElement('div');
-                    div.className = 'tile';
-                    div.innerText = btn.title;
-                    div.style.backgroundColor = btn.color || '#333';
-                    
-                    // Pozycjonowanie CSS Grid na podstawie x, y, w, h
-                    div.style.gridColumn = `${btn.x} / span ${btn.w}`;
-                    div.style.gridRow = `${btn.y} / span ${btn.h}`;
-
-                    // Podpinamy kliknięcie (wysyła żądanie do API)
-                    div.onclick = async () => {
-                        if (btn.type === 'ACTION') {
-                            await fetch('/dispatcher/trigger', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ command: btn.payload.command, args: btn.payload.args })
-                            });
-                        }
-                    };
-                    
-                    container.appendChild(div);
-                });
-
-            } catch (error) {
-                console.error("Błąd ładowania układu:", error);
-                document.getElementById('grid-container').innerText = "Nie udało się załadować panelu.";
+                fullLayoutData = await res.json();
+                const activeProfile = fullLayoutData.layouts.find(l => l.id === fullLayoutData.active_layout_id) || fullLayoutData.layouts[0];
+                activeButtons = activeProfile.buttons;
+                renderGrid();
+            } catch (e) { 
+                console.error("Błąd ładowania", e); 
+                container.innerHTML = `<p style="color:red; text-align:center; margin-top:20px;">Nie udało się załadować panelu.<br>${e.message}</p>`;
             }
         }
 
-        // Uruchamiamy od razu po załadowaniu strony
+        function toggleEditMode() {
+            isEditMode = !isEditMode;
+            document.body.classList.toggle('edit-mode', isEditMode);
+            
+            document.getElementById('edit-btn').innerText = isEditMode ? "Wyłącz Edycję" : "Tryb Edycji";
+            document.getElementById('edit-btn').classList.toggle('active', isEditMode);
+            document.getElementById('save-btn').style.display = isEditMode ? 'inline-block' : 'none';
+            
+            renderGrid(); // Odświeżamy siatkę, żeby aktywować/dezaktywować atrybut 'draggable' na kafelkach
+        }
+
+        async function saveLayout() {
+            try {
+                const response = await fetch('/dispatcher/save_layout', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(fullLayoutData)
+                });
+                
+                if(response.ok) {
+                    alert('Zapisano pomyślnie! Odśwież aplikację na telefonie, żeby zobaczyć zmiany.');
+                    toggleEditMode();
+                } else {
+                    alert('Wystąpił błąd podczas zapisu.');
+                }
+            } catch (e) { 
+                alert('Błąd połączenia z serwerem.'); 
+            }
+        }
+
+        // Uruchamiamy
         loadLayout();
     </script>
 </body>
