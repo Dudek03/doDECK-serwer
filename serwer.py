@@ -4,7 +4,7 @@ from modules.system import register_socket_events
 from modules import blueprints
 from flask_socketio import SocketIO
 from flask_cors import CORS
-from flask import Flask, render_template
+from flask import Flask
 from PIL import Image, ImageDraw
 import webbrowser
 import socket
@@ -15,7 +15,7 @@ import threading
 Image.init()
 
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder="web-panel/dist", static_url_path="/")
 CORS(app)
 socketio = SocketIO(app, cors_allower_origins="*")
 for bp in blueprints:
@@ -29,7 +29,7 @@ register_dispatcher_events(socketio)
 @app.route("/")
 def index():
     """opens main page of web editor"""
-    return render_template("index.html")
+    return app.send_static_file("index.html")
 
 
 def create_default_icon():

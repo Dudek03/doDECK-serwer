@@ -1,20 +1,38 @@
-import React, { useState, useEffect, useRef } from 'react';
-import GridLayout from 'react-grid-layout';
+import { useState, useEffect, useRef } from 'react';
+import GridLayout from 'react-grid-layout'; // Usunięto wadliwy import { Layout }
 import axios from 'axios';
 import { io } from 'socket.io-client';
 
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 
-// Socket łączy się automatycznie z hostem, z którego pobrano stronę (tak samo jak w HTML)
 const socket = io();
+
+// Silne typowanie dla Twoich danych
+interface ButtonPayload {
+    command?: string;
+    args?: string;
+    sensor?: string;
+}
+
+interface TileButton {
+    id: string | number;
+    title: string;
+    color: string;
+    type: string;
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+    payload: ButtonPayload;
+}
 
 function App() {
     const [fullLayoutData, setFullLayoutData] = useState<any>(null);
-    const [activeButtons, setActiveButtons] = useState<any[]>([]);
+    const [activeButtons, setActiveButtons] = useState<TileButton[]>([]);
     const [isEditMode, setIsEditMode] = useState(false);
     const [systemData, setSystemData] = useState({ cpu: '...', ram: '...' });
-    const [editingTile, setEditingTile] = useState<any>(null);
+    const [editingTile, setEditingTile] = useState<TileButton | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [gridWidth, setGridWidth] = useState(800);
 
@@ -31,7 +49,6 @@ function App() {
     useEffect(() => {
         const fetchLayout = async () => {
             try {
-                // Ścieżki względne, żeby działało na każdym IP
                 const res = await axios.get(`/dispatcher/get_layout`);
                 setFullLayoutData(res.data);
                 const activeProfile = res.data.layouts.find((l: any) => l.id === res.data.active_layout_id) || res.data.layouts[0];
@@ -43,15 +60,13 @@ function App() {
         fetchLayout();
     }, []);
 
-    // NAPRAWIONE GNIAZDA (WebSockets)
     useEffect(() => {
         const onConnect = () => socket.emit('subscribe_telemetry');
 
-        // Jeśli gniazdo zdążyło się połączyć przed uruchomieniem useEffect, wywołaj ręcznie
         if (socket.connected) onConnect();
 
         socket.on('connect', onConnect);
-        socket.on('system_update', (data) => {
+        socket.on('system_update', (data: any) => {
             setSystemData({ cpu: data.cpu, ram: data.ram });
         });
 
@@ -61,9 +76,10 @@ function App() {
         };
     }, []);
 
-    // CZYSTE KLIKNIĘCIE BEZ HACKÓW
-    const handleTileClick = async (btn: any) => {
+    const handleTileClick = async (btn: TileButton) => {
         if (isEditMode) return;
+
+        console.log("Odpalam kafelek:", btn.title);
 
         if (btn.type === 'ACTION') {
             try {
@@ -79,10 +95,11 @@ function App() {
         }
     };
 
-    const onLayoutChange = (newLayout: any[]) => {
+    // Omijamy błędne typowanie w samej bibliotece za pomocą "any"
+    const onLayoutChange = (newLayout: any) => {
         if (!isEditMode) return;
         const updatedButtons = activeButtons.map(btn => {
-            const movedItem = newLayout.find(l => l.i === String(btn.id));
+            const movedItem = newLayout.find((l: any) => l.i === String(btn.id));
             if (movedItem) {
                 return { ...btn, x: movedItem.x + 1, y: movedItem.y + 1, w: movedItem.w, h: movedItem.h };
             }
@@ -106,7 +123,7 @@ function App() {
     };
 
     const addNewTile = () => {
-        const newTile = {
+        const newTile: TileButton = {
             id: Date.now().toString(),
             title: "NOWY", color: "#e67e22", type: "ACTION", x: 1, y: 1, w: 1, h: 1,
             payload: { command: "hotkey", args: "enter" }
@@ -142,12 +159,14 @@ function App() {
     };
 
     const saveTileEdit = () => {
+        if (!editingTile) return;
         const updatedButtons = activeButtons.map(b => b.id === editingTile.id ? editingTile : b);
         setActiveButtons(updatedButtons);
         setEditingTile(null);
     };
 
     const changeTileType = (newType: string) => {
+        if (!editingTile) return;
         let defaultPayload = {};
         if (newType === 'ACTION') defaultPayload = { command: 'hotkey', args: '' };
         else if (newType === 'WIDGET') defaultPayload = { command: 'open_mixer' };
@@ -155,7 +174,8 @@ function App() {
         setEditingTile({ ...editingTile, type: newType, payload: defaultPayload });
     };
 
-    const updatePayload = (key: string, value: string) => {
+    const updatePayload = (key: keyof ButtonPayload, value: string) => {
+        if (!editingTile) return;
         setEditingTile({ ...editingTile, payload: { ...editingTile.payload, [key]: value } });
     };
 
@@ -191,10 +211,10 @@ function App() {
             <div className={`grid-container ${isEditMode ? 'edit-mode' : ''}`} ref={containerRef} style={{ width: '100%', maxWidth: '800px', minHeight: 400, position: 'relative' }}>
                 <GridLayout
                     className="layout"
-                    layout={currentLayout}
+                    layout={currentLayout as any}
                     width={gridWidth}
-                    cols={activeProfile.grid.columns}
-                    maxRows={activeProfile.grid.rows}
+                    {...({ cols: Number(activeProfile.grid.columns) || 4 } as any)}
+                    maxRows={Number(activeProfile.grid.rows) || 4}
                     isBounded={true}
                     rowHeight={150}
                     onLayoutChange={onLayoutChange}
@@ -206,13 +226,18 @@ function App() {
                     {activeButtons.map(btn => (
                         <div
                             key={String(btn.id)}
-                            style={{ backgroundColor: btn.color || '#333', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', cursor: isEditMode ? 'grab' : 'pointer', position: 'relative' }}
-                            onClick={() => handleTileClick(btn)}
+                            style={{ backgroundColor: btn.color || '#333', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', cursor: isEditMode ? 'grab' : 'pointer', position: 'relative', userSelect: 'none' }}
+                            onPointerDown={(e) => {
+                                if (!isEditMode) {
+                                    e.stopPropagation();
+                                    handleTileClick(btn);
+                                }
+                            }}
                         >
                             {isEditMode && (
                                 <div
                                     style={{ position: 'absolute', top: 5, right: 5, cursor: 'pointer', background: 'rgba(0,0,0,0.5)', borderRadius: 5, padding: '2px 5px', zIndex: 10 }}
-                                    onClick={(e) => { e.stopPropagation(); setEditingTile({ ...btn }); }}
+                                    onPointerDown={(e) => { e.stopPropagation(); setEditingTile({ ...btn }); }}
                                 >
                                     ⚙️
                                 </div>
@@ -233,7 +258,6 @@ function App() {
                 </GridLayout>
             </div>
 
-            {/* MODAL EDYCJI (Bez zmian, działał dobrze) */}
             {editingTile && (
                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
                     <div style={{ background: '#222', padding: 20, borderRadius: 10, width: 320, display: 'flex', flexDirection: 'column', gap: 10 }}>

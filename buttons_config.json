@@ -28,8 +28,8 @@
                     "title": "task-manager",
                     "type": "ACTION",
                     "w": 1,
-                    "x": 2,
-                    "y": 1
+                    "x": 3,
+                    "y": 2
                 },
                 {
                     "color": "#1a1a1a",
@@ -70,7 +70,7 @@
                     "type": "WIDGET",
                     "w": 2,
                     "x": 1,
-                    "y": 2
+                    "y": 3
                 },
                 {
                     "color": "#5865F2",
@@ -83,7 +83,7 @@
                     "type": "LIVE DATA",
                     "w": 2,
                     "x": 1,
-                    "y": 3
+                    "y": 4
                 },
                 {
                     "color": "#2ecc71",
@@ -96,8 +96,8 @@
                     "title": "prev",
                     "type": "ACTION",
                     "w": 1,
-                    "x": 3,
-                    "y": 2
+                    "x": 2,
+                    "y": 1
                 },
                 {
                     "color": "#2ecc71",
@@ -126,6 +126,20 @@
                     "w": 1,
                     "x": 7,
                     "y": 1
+                },
+                {
+                    "id": "1791203798186",
+                    "title": "NOWY",
+                    "color": "#e67e22",
+                    "type": "ACTION",
+                    "x": 1,
+                    "y": 2,
+                    "w": 1,
+                    "h": 1,
+                    "payload": {
+                        "command": "open_url",
+                        "args": "https://github.com/Dudek03"
+                    }
                 }
             ],
             "grid": {
