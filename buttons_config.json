@@ -70,7 +70,7 @@
                     "type": "WIDGET",
                     "w": 2,
                     "x": 1,
-                    "y": 3
+                    "y": 4
                 },
                 {
                     "color": "#5865F2",
@@ -83,7 +83,7 @@
                     "type": "LIVE DATA",
                     "w": 2,
                     "x": 1,
-                    "y": 4
+                    "y": 5
                 },
                 {
                     "color": "#2ecc71",
@@ -128,18 +128,77 @@
                     "y": 1
                 },
                 {
-                    "id": "1791203798186",
-                    "title": "NOWY",
-                    "color": "#e67e22",
-                    "type": "ACTION",
-                    "x": 1,
-                    "y": 2,
-                    "w": 1,
+                    "color": "#2623e7",
                     "h": 1,
+                    "id": "1791203798186",
                     "payload": {
-                        "command": "open_url",
-                        "args": "https://github.com/Dudek03"
-                    }
+                        "args": [
+                            {
+                                "height": 840,
+                                "title": "web-panel – Brave",
+                                "width": 781,
+                                "x": -6,
+                                "y": 0
+                            },
+                            {
+                                "height": 423,
+                                "title": "Windows PowerShell",
+                                "width": 781,
+                                "x": 762,
+                                "y": 0
+                            },
+                            {
+                                "height": 514,
+                                "title": "Znajomi - Discord",
+                                "width": 827,
+                                "x": 715,
+                                "y": 326
+                            },
+                            {
+                                "height": 613,
+                                "title": "Spotify",
+                                "width": 813,
+                                "x": 723,
+                                "y": 221
+                            },
+                            {
+                                "exec_path": "C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe",
+                                "height": 431,
+                                "title": "PBacktEnd-Lab10 – Brave",
+                                "width": 782,
+                                "x": 761,
+                                "y": 410
+                            },
+                            {
+                                "exec_path": "C:\\Program Files\\Mozilla Firefox\\firefox.exe",
+                                "height": 704,
+                                "title": "Mozilla Firefox",
+                                "width": 655,
+                                "x": 759,
+                                "y": 0
+                            }
+                        ],
+                        "command": "workspace"
+                    },
+                    "title": "test",
+                    "type": "WORKSPACE",
+                    "w": 1,
+                    "x": 1,
+                    "y": 3
+                },
+                {
+                    "color": "#e67e22",
+                    "h": 1,
+                    "id": "1791279874048",
+                    "payload": {
+                        "args": "enter",
+                        "command": "hotkey"
+                    },
+                    "title": "NOWY",
+                    "type": "ACTION",
+                    "w": 1,
+                    "x": 1,
+                    "y": 2
                 }
             ],
             "grid": {

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import GridLayout from 'react-grid-layout'; // Usunięto wadliwy import { Layout }
+import GridLayout from 'react-grid-layout';
 import axios from 'axios';
 import { io } from 'socket.io-client';
 
@@ -8,10 +8,18 @@ import 'react-resizable/css/styles.css';
 
 const socket = io();
 
-// Silne typowanie dla Twoich danych
+// Nowe interfejsy dla okien i rozszerzony payload
+interface WindowTarget {
+    title: string;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+}
+
 interface ButtonPayload {
     command?: string;
-    args?: string;
+    args?: any; // Zmienione z 'string', aby obsługiwać tablicę okien WindowTarget[]
     sensor?: string;
 }
 
@@ -32,7 +40,10 @@ function App() {
     const [activeButtons, setActiveButtons] = useState<TileButton[]>([]);
     const [isEditMode, setIsEditMode] = useState(false);
     const [systemData, setSystemData] = useState({ cpu: '...', ram: '...' });
+    
     const [editingTile, setEditingTile] = useState<TileButton | null>(null);
+    const [scannedWindows, setScannedWindows] = useState<WindowTarget[]>([]); // Stan dla otwartych okien
+    
     const containerRef = useRef<HTMLDivElement>(null);
     const [gridWidth, setGridWidth] = useState(800);
 
@@ -62,7 +73,6 @@ function App() {
 
     useEffect(() => {
         const onConnect = () => socket.emit('subscribe_telemetry');
-
         if (socket.connected) onConnect();
 
         socket.on('connect', onConnect);
@@ -78,10 +88,10 @@ function App() {
 
     const handleTileClick = async (btn: TileButton) => {
         if (isEditMode) return;
-
         console.log("Odpalam kafelek:", btn.title);
 
-        if (btn.type === 'ACTION') {
+        // Używamy REST API do wyzwalania akcji ACTION i WORKSPACE (zgodnie z obecnym dispatcher.py)
+        if (btn.type === 'ACTION' || btn.type === 'WORKSPACE') {
             try {
                 await axios.post(`/dispatcher/trigger`, {
                     command: btn.payload.command,
@@ -95,7 +105,6 @@ function App() {
         }
     };
 
-    // Omijamy błędne typowanie w samej bibliotece za pomocą "any"
     const onLayoutChange = (newLayout: any) => {
         if (!isEditMode) return;
         const updatedButtons = activeButtons.map(btn => {
@@ -163,6 +172,7 @@ function App() {
         const updatedButtons = activeButtons.map(b => b.id === editingTile.id ? editingTile : b);
         setActiveButtons(updatedButtons);
         setEditingTile(null);
+        setScannedWindows([]); // Czyścimy listę po zamknięciu edytora
     };
 
     const changeTileType = (newType: string) => {
@@ -171,12 +181,42 @@ function App() {
         if (newType === 'ACTION') defaultPayload = { command: 'hotkey', args: '' };
         else if (newType === 'WIDGET') defaultPayload = { command: 'open_mixer' };
         else if (newType === 'LIVE DATA') defaultPayload = { sensor: 'cpu' };
+        else if (newType === 'WORKSPACE') defaultPayload = { command: 'workspace', args: [] };
+        
         setEditingTile({ ...editingTile, type: newType, payload: defaultPayload });
     };
 
-    const updatePayload = (key: keyof ButtonPayload, value: string) => {
+    const updatePayload = (key: keyof ButtonPayload, value: any) => {
         if (!editingTile) return;
         setEditingTile({ ...editingTile, payload: { ...editingTile.payload, [key]: value } });
+    };
+
+    // POBIERANIE OTARTYCH OKIEN Z SERWERA
+    const handleScanWindows = async () => {
+        try {
+            const res = await axios.get('/dispatcher/scan_windows');
+            if (res.data && res.data.windows) {
+                setScannedWindows(res.data.windows);
+            }
+        } catch (error) {
+            console.error("Błąd skanowania okien:", error);
+            alert("Nie udało się pobrać listy okien z Flaska.");
+        }
+    };
+
+    // ZAZNACZANIE/ODZACZANIE OKIEN W WORKSPACE
+    const toggleWindowSelection = (win: WindowTarget) => {
+        if (!editingTile) return;
+        const currentArgs = (editingTile.payload.args as WindowTarget[]) || [];
+        const exists = currentArgs.find(w => w.title === win.title);
+
+        let newArgs;
+        if (exists) {
+            newArgs = currentArgs.filter(w => w.title !== win.title);
+        } else {
+            newArgs = [...currentArgs, win];
+        }
+        updatePayload('args', newArgs);
     };
 
     if (!fullLayoutData) return <h2 style={{ marginTop: 50 }}>Ładowanie panelu z serwera...</h2>;
@@ -237,9 +277,9 @@ function App() {
                             {isEditMode && (
                                 <div
                                     style={{ position: 'absolute', top: 5, right: 5, cursor: 'pointer', background: 'rgba(0,0,0,0.5)', borderRadius: 5, padding: '2px 5px', zIndex: 10 }}
-                                    onPointerDown={(e) => { e.stopPropagation(); setEditingTile({ ...btn }); }}
+                                    onPointerDown={(e) => { e.stopPropagation(); setEditingTile({ ...btn }); setScannedWindows([]); }}
                                 >
-                                    ⚙️
+                                    ⚙️️
                                 </div>
                             )}
 
@@ -274,6 +314,7 @@ function App() {
                             <option value="ACTION">Akcja (ACTION)</option>
                             <option value="WIDGET">Widżet (WIDGET)</option>
                             <option value="LIVE DATA">Dane systemowe (LIVE DATA)</option>
+                            <option value="WORKSPACE">Przestrzeń robocza (WORKSPACE)</option>
                         </select>
 
                         {editingTile.type === 'ACTION' && (
@@ -307,9 +348,36 @@ function App() {
                             </>
                         )}
 
+                        {editingTile.type === 'WORKSPACE' && (
+                            <>
+                                <button onClick={handleScanWindows} style={{ background: '#3498db', color: 'white', padding: 8, border: 'none', borderRadius: 5, cursor: 'pointer', marginTop: 5 }}>
+                                    🔍 Skanuj otwarte okna
+                                </button>
+                                
+                                <div style={{ maxHeight: '160px', overflowY: 'auto', background: '#111', padding: '10px', borderRadius: '5px', marginTop: '5px' }}>
+                                    {scannedWindows.length === 0 ? (
+                                        <p style={{ margin: 0, fontSize: '0.85rem', color: '#888' }}>Brak zeskanowanych okien. Kliknij przycisk wyżej.</p>
+                                    ) : (
+                                        scannedWindows.map((win, idx) => {
+                                            const currentArgs = (editingTile.payload.args as WindowTarget[]) || [];
+                                            const isSelected = currentArgs.some(w => w.title === win.title);
+                                            return (
+                                                <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', cursor: 'pointer' }} onClick={() => toggleWindowSelection(win)}>
+                                                    <input type="checkbox" checked={isSelected} readOnly style={{ cursor: 'pointer' }} />
+                                                    <span style={{ fontSize: '0.85rem', color: '#ddd', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={win.title}>
+                                                        {win.title}
+                                                    </span>
+                                                </div>
+                                            );
+                                        })
+                                    )}
+                                </div>
+                            </>
+                        )}
+
                         <div style={{ display: 'flex', gap: 10, marginTop: 15 }}>
                             <button onClick={saveTileEdit} style={{ flex: 1, background: '#2ecc71', color: 'black', padding: 8, border: 'none', borderRadius: 5, cursor: 'pointer', fontWeight: 'bold' }}>Zapisz</button>
-                            <button onClick={() => setEditingTile(null)} style={{ flex: 1, background: '#555', color: 'white', padding: 8, border: 'none', borderRadius: 5, cursor: 'pointer' }}>Anuluj</button>
+                            <button onClick={() => { setEditingTile(null); setScannedWindows([]); }} style={{ flex: 1, background: '#555', color: 'white', padding: 8, border: 'none', borderRadius: 5, cursor: 'pointer' }}>Anuluj</button>
                             <button onClick={() => { setActiveButtons(activeButtons.filter(b => b.id !== editingTile.id)); setEditingTile(null); }} style={{ background: '#e74c3c', color: 'white', border: 'none', borderRadius: 5, cursor: 'pointer', padding: 8 }}>Usuń</button>
                         </div>
                     </div>
