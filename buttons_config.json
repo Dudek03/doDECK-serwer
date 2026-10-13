@@ -70,11 +70,11 @@
                     "type": "WIDGET",
                     "w": 2,
                     "x": 1,
-                    "y": 4
+                    "y": 3
                 },
                 {
                     "color": "#5865F2",
-                    "h": 2,
+                    "h": 1,
                     "id": "4",
                     "payload": {
                         "sensor": "ram"
@@ -82,8 +82,8 @@
                     "title": "ram usage",
                     "type": "LIVE DATA",
                     "w": 2,
-                    "x": 1,
-                    "y": 5
+                    "x": 3,
+                    "y": 3
                 },
                 {
                     "color": "#2ecc71",
@@ -184,7 +184,7 @@
                     "type": "WORKSPACE",
                     "w": 1,
                     "x": 1,
-                    "y": 3
+                    "y": 2
                 },
                 {
                     "color": "#e67e22",
@@ -197,7 +197,7 @@
                     "title": "NOWY",
                     "type": "ACTION",
                     "w": 1,
-                    "x": 1,
+                    "x": 2,
                     "y": 2
                 }
             ],

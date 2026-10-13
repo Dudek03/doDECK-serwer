@@ -4,7 +4,6 @@ import os
 import webbrowser
 import json
 import pygetwindow as gw
-import subprocess
 import time
 import psutil
 import ctypes
@@ -114,6 +113,56 @@ DEFAULT_LAYOUT = {
 }
 
 
+def execute_command(command, args):
+    """Główna funkcja wykonawcza. Eliminuje powtarzanie kodu (DRY)."""
+    try:
+        if command == "hotkey":
+            keyboard.send(args)
+            return True, f"Wysłano skrót: {args}"
+
+        elif command == "open_url":
+            webbrowser.open(args)
+            return True, f"Otwarto stronę: {args}"
+
+        elif command == "workspace":
+            for target in args:
+                title = target.get("title", "")
+                exec_path = target.get("exec_path", "")
+                matched_windows = gw.getWindowsWithTitle(title)
+
+                # Wskrzeszanie zamkniętych okien
+                if not matched_windows and exec_path:
+                    try:
+                        os.startfile(exec_path)
+                        for _ in range(10):
+                            time.sleep(0.5)
+                            matched_windows = gw.getWindowsWithTitle(title)
+                            if matched_windows:
+                                break
+                    except Exception as e:
+                        print(f"[WARN] Błąd startu {exec_path}: {e}")
+
+                # Przesuwanie i skalowanie
+                if matched_windows:
+                    win = matched_windows[0]
+                    try:
+                        if win.isMinimized:
+                            win.restore()
+                        win.moveTo(target["x"], target["y"])
+                        win.resizeTo(target["width"], target["height"])
+                        win.activate()
+                    except Exception as e:
+                        # Ignorujemy fałszywe błędy Windowsa o kodzie 0
+                        if "Error code from Windows: 0" not in str(e):
+                            print(f"[WARN] Błąd przesunięcia okna {title}: {e}")
+
+            return True, "Zastosowano układ Workspace"
+
+        return False, f"Nieznana komenda: {command}"
+    except Exception as e:
+        return False, str(e)
+
+
 @dispatcher_bp.route("/get_layout", methods=["GET"])
 def get_layout():
     try:
@@ -142,24 +191,20 @@ def save_layout():
 
 @dispatcher_bp.route("/scan_windows", methods=["GET"])
 def scan_windows():
-    """Zwraca listę widocznych okien na ekranie z ich współrzędnymi, wymiarami i ścieżką .exe."""
     windows = []
     for win in gw.getAllWindows():
         if win.title and win.visible and win.width > 0 and win.height > 0:
             exec_path = ""
             try:
-                # Magia Windows API: Pobieramy PID z uchwytu okna (win._hWnd)
                 pid = ctypes.c_ulong()
                 ctypes.windll.user32.GetWindowThreadProcessId(
                     win._hWnd, ctypes.byref(pid)
                 )
-
                 if pid.value > 0:
                     process = psutil.Process(pid.value)
                     exec_path = process.exe()
             except Exception:
-                # Ignorujemy błędy braku uprawnień
-                pass
+                pass  # Ignorujemy chronione procesy systemowe
 
             windows.append(
                 {
@@ -176,97 +221,22 @@ def scan_windows():
 
 @dispatcher_bp.route("/trigger", methods=["POST"])
 def trigger_action_rest():
+    """Bramka dla skryptów zewnętrznych i starego Web Edytora"""
     data = request.get_json()
-    command = data.get("command")
-    args = data.get("args", "")
+    success, msg = execute_command(data.get("command"), data.get("args", ""))
 
-    try:
-        if command == "hotkey":
-            keyboard.send(args)
-            return jsonify({"status": "ok", "msg": f"Wysłano: {args}"})
-        elif command == "open_url":
-            webbrowser.open(args)
-            return jsonify({"status": "ok", "msg": "Otwarto stronę"})
-        elif command == "workspace":
-            for target in args:
-                title = target.get("title", "")
-                exec_path = target.get("exec_path", "")
-
-                matched_windows = gw.getWindowsWithTitle(title)
-
-                # Jeśli okno nie istnieje, a mamy ścieżkę - odpalamy aplikację
-                if not matched_windows and exec_path:
-                    try:
-                        subprocess.Popen(exec_path)
-                        # Czekamy maks 5 sekund (10 * 0.5s) aż okno się pojawi
-                        for _ in range(10):
-                            time.sleep(0.5)
-                            matched_windows = gw.getWindowsWithTitle(title)
-                            if matched_windows:
-                                break
-                    except Exception as e:
-                        print(f"[WARN] Nie udało się uruchomić {exec_path}: {e}")
-
-                if matched_windows:
-                    win = matched_windows[0]
-                    try:
-                        if win.isMinimized:
-                            win.restore()
-                        win.moveTo(target["x"], target["y"])
-                        win.resizeTo(target["width"], target["height"])
-                        win.activate()
-                    except Exception as e:
-                        print(f"[WARN] Błąd przesunięcia okna {title}: {e}")
-            return jsonify({"status": "ok", "msg": "Zastosowano układ Workspace"})
-        else:
-            return jsonify({"error": "Nieznana komenda"}), 400
-    except Exception as e:
-        print(f"[ERROR] Trigger error: {e}")
-        return jsonify({"error": str(e)}), 500
+    if success:
+        return jsonify({"status": "ok", "msg": msg})
+    return jsonify({"error": msg}), 400
 
 
 def register_dispatcher_events(socketio):
+    """Bramka dla natywnej aplikacji mobilnej (ultra-szybka)"""
+
     @socketio.on("trigger_action")
     def handle_trigger(data):
-        command = data.get("command")
-        args = data.get("args", "")
-
-        try:
-            if command == "hotkey":
-                keyboard.send(args)
-                print(f"🚀 [WS] Wykonano skrót: {args}")
-            elif command == "open_url":
-                webbrowser.open(args)
-                print(f"🌍 [WS] Otwarto stronę: {args}")
-            elif command == "workspace":
-                for target in args:
-                    title = target.get("title", "")
-                    exec_path = target.get("exec_path", "")
-
-                    matched_windows = gw.getWindowsWithTitle(title)
-
-                    if not matched_windows and exec_path:
-                        try:
-                            subprocess.Popen(exec_path)
-                            for _ in range(10):
-                                time.sleep(0.5)
-                                matched_windows = gw.getWindowsWithTitle(title)
-                                if matched_windows:
-                                    break
-                        except Exception as e:
-                            print(f"❌ [WS] Błąd startu {exec_path}: {e}")
-
-                    if matched_windows:
-                        win = matched_windows[0]
-                        try:
-                            if win.isMinimized:
-                                win.restore()
-                            win.moveTo(target["x"], target["y"])
-                            win.resizeTo(target["width"], target["height"])
-                            win.activate()
-                        except Exception as e:
-                            print(f"❌ [WS] Błąd przesunięcia okna {title}: {e}")
-                print("WS] Zastosowano workspace")
-        except Exception as e:
-            print(f"❌ [WS] Błąd triggera: {e}")
-            print(f"❌ [WS] Błąd triggera: {e}")
+        success, msg = execute_command(data.get("command"), data.get("args", ""))
+        if success:
+            print(f"🚀 [WS] {msg}")
+        else:
+            print(f"❌ [WS] Błąd: {msg}")
