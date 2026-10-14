@@ -14,8 +14,8 @@
                     "title": "pulpit",
                     "type": "ACTION",
                     "w": 1,
-                    "x": 1,
-                    "y": 1
+                    "x": 4,
+                    "y": 2
                 },
                 {
                     "color": "#1a1a1a",
@@ -56,8 +56,8 @@
                     "title": "onet",
                     "type": "ACTION",
                     "w": 4,
-                    "x": 4,
-                    "y": 2
+                    "x": 1,
+                    "y": 4
                 },
                 {
                     "color": "#2ecc71",
@@ -110,8 +110,8 @@
                     "title": "next",
                     "type": "ACTION",
                     "w": 3,
-                    "x": 4,
-                    "y": 1
+                    "x": 2,
+                    "y": 5
                 },
                 {
                     "color": "#e67e22",
@@ -124,7 +124,7 @@
                     "title": "NOWY",
                     "type": "ACTION",
                     "w": 1,
-                    "x": 7,
+                    "x": 4,
                     "y": 1
                 },
                 {
@@ -184,7 +184,7 @@
                     "type": "WORKSPACE",
                     "w": 1,
                     "x": 1,
-                    "y": 2
+                    "y": 1
                 },
                 {
                     "color": "#e67e22",

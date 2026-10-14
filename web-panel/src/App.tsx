@@ -5,6 +5,7 @@ import type { TileButton } from './types';
 import Header from './components/Header';
 import DevicePreview from './components/DevicePreview';
 import EditorModal from './components/EditorModal';
+import AudioMixerModal from './components/AudioMixerModal';
 
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
@@ -18,6 +19,8 @@ export default function App() {
     const [isEditMode, setIsEditMode] = useState(false);
     const [systemData, setSystemData] = useState({ cpu: '...', ram: '...' });
     const [editingTile, setEditingTile] = useState<TileButton | null>(null);
+    const [audioData, setAudioData] = useState<any>(null);
+
 
     useEffect(() => {
         const fetchLayout = async () => {
@@ -34,10 +37,15 @@ export default function App() {
 
         socket.on('connect', () => socket.emit('subscribe_telemetry'));
         socket.on('system_update', (data: any) => setSystemData({ cpu: data.cpu, ram: data.ram }));
+        socket.on('audio_volume_data', (data: any) => {
+            setAudioData(data)
+        })
 
         return () => {
             socket.off('connect');
             socket.off('system_update');
+            socket.off('audio_volume_data');
+
         };
     }, []);
 
@@ -49,6 +57,10 @@ export default function App() {
         } else if (btn.type === 'WIDGET' && btn.payload.command === 'open_mixer') {
             socket.emit('get_audio_volume');
         }
+    };
+
+    const handleVolumeChange = (appName: string, volume: number) => {
+        socket.emit('set_audio_volume', { app: appName, volume: volume });
     };
 
     const saveLayout = async () => {
@@ -143,6 +155,15 @@ export default function App() {
                     }}
                 />
             )}
+
+            {audioData && (
+                <AudioMixerModal
+                    appsVolume={audioData}
+                    onClose={() => setAudioData(null)}
+                    onVolumeChange={handleVolumeChange}
+                />
+            )}
+
         </div>
     );
 }
