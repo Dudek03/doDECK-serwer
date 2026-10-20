@@ -4,12 +4,13 @@ import type { TileButton, WindowTarget } from '../types';
 
 interface EditorModalProps {
     tile: TileButton;
+    profiles: any[];
     onSave: (updatedTile: TileButton) => void;
     onCancel: () => void;
     onDelete: (id: string | number) => void;
 }
 
-export default function EditorModal({ tile, onSave, onCancel, onDelete }: EditorModalProps) {
+export default function EditorModal({ tile, profiles, onSave, onCancel, onDelete }: EditorModalProps) {
     const [editingTile, setEditingTile] = useState<TileButton>({ ...tile });
     const [scannedWindows, setScannedWindows] = useState<WindowTarget[]>([]);
 
@@ -42,13 +43,13 @@ export default function EditorModal({ tile, onSave, onCancel, onDelete }: Editor
     return (
         <div className="modal-overlay">
             <div className="modal-content">
-                <h3 style={{ margin: '0 0 10px 0' }}>Edytuj Kafelek</h3>
+                <h3 style={{ margin: '0 0 10px 0', color: '#fff' }}>Edytuj Kafelek</h3>
 
                 <label className="modal-label">Tytuł:</label>
                 <input className="modal-input" value={editingTile.title} onChange={e => setEditingTile({ ...editingTile, title: e.target.value })} />
 
                 <label className="modal-label">Kolor:</label>
-                <input type="color" value={editingTile.color} onChange={e => setEditingTile({ ...editingTile, color: e.target.value })} style={{ width: '100%', height: '40px', border: 'none', cursor: 'pointer' }} />
+                <input type="color" value={editingTile.color} onChange={e => setEditingTile({ ...editingTile, color: e.target.value })} style={{ width: '100%', height: '40px', border: 'none', cursor: 'pointer', borderRadius: '4px' }} />
 
                 <label className="modal-label">Typ:</label>
                 <select className="modal-input" value={editingTile.type} onChange={e => {
@@ -58,13 +59,26 @@ export default function EditorModal({ tile, onSave, onCancel, onDelete }: Editor
                     else if (newType === 'WIDGET') defPayload = { command: 'open_mixer' };
                     else if (newType === 'LIVE DATA') defPayload = { sensor: 'cpu' };
                     else if (newType === 'WORKSPACE') defPayload = { command: 'workspace', args: [] };
+                    else if (newType === 'FOLDER') defPayload = { args: profiles[0]?.id || '' };
                     setEditingTile({ ...editingTile, type: newType, payload: defPayload });
                 }}>
                     <option value="ACTION">Akcja (ACTION)</option>
+                    <option value="FOLDER">Folder / Profil (FOLDER)</option>
                     <option value="WIDGET">Widżet (WIDGET)</option>
                     <option value="LIVE DATA">Dane systemowe (LIVE DATA)</option>
                     <option value="WORKSPACE">Przestrzeń robocza (WORKSPACE)</option>
                 </select>
+
+                {editingTile.type === 'FOLDER' && (
+                    <>
+                        <label className="modal-label">Wybierz profil docelowy:</label>
+                        <select className="modal-input" value={editingTile.payload.args || ''} onChange={e => updatePayload('args', e.target.value)}>
+                            {profiles.map(p => (
+                                <option key={p.id} value={p.id}>{p.name}</option>
+                            ))}
+                        </select>
+                    </>
+                )}
 
                 {editingTile.type === 'ACTION' && (
                     <>
@@ -87,11 +101,11 @@ export default function EditorModal({ tile, onSave, onCancel, onDelete }: Editor
                                 return (
                                     <div key={idx} style={{ marginBottom: '10px' }}>
                                         <div className="window-item" onClick={() => toggleWindowSelection(win)}>
-                                            <input type="checkbox" checked={!!savedWin} readOnly />
+                                            <input type="checkbox" checked={!!savedWin} readOnly style={{ cursor: 'pointer' }} />
                                             <span className="window-title">{win.title}</span>
                                         </div>
                                         {!!savedWin && (
-                                            <input 
+                                            <input
                                                 className="modal-input"
                                                 placeholder="C:\app.exe"
                                                 value={savedWin?.exec_path || ''}

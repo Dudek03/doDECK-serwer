@@ -9,7 +9,7 @@ import AudioMixerModal from './components/AudioMixerModal';
 
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
-import './styles/styles.css';
+import './styles.css';
 
 const socket = io();
 
@@ -21,6 +21,8 @@ export default function App() {
     const [editingTile, setEditingTile] = useState<TileButton | null>(null);
     const [audioData, setAudioData] = useState<any>(null);
 
+    // Stos nawigacyjny LIFO
+    const [profileStack, setProfileStack] = useState<string[]>([]);
 
     useEffect(() => {
         const fetchLayout = async () => {
@@ -37,17 +39,23 @@ export default function App() {
 
         socket.on('connect', () => socket.emit('subscribe_telemetry'));
         socket.on('system_update', (data: any) => setSystemData({ cpu: data.cpu, ram: data.ram }));
-        socket.on('audio_volume_data', (data: any) => {
-            setAudioData(data)
-        })
+        socket.on('audio_volume_data', (data: any) => setAudioData(data));
 
         return () => {
             socket.off('connect');
             socket.off('system_update');
             socket.off('audio_volume_data');
-
         };
     }, []);
+
+    const switchProfile = (profileId: string) => {
+        const profile = fullLayoutData.layouts.find((l: any) => l.id === profileId);
+        if (!profile) return;
+
+        const updatedData = { ...fullLayoutData, active_layout_id: profileId };
+        setFullLayoutData(updatedData);
+        setActiveButtons(profile.buttons);
+    };
 
     const handleTileClick = (btn: TileButton) => {
         if (isEditMode) return;
@@ -56,11 +64,29 @@ export default function App() {
             socket.emit('trigger_action', { command: btn.payload.command, args: btn.payload.args || '' });
         } else if (btn.type === 'WIDGET' && btn.payload.command === 'open_mixer') {
             socket.emit('get_audio_volume');
+        } else if (btn.type === 'FOLDER') {
+            // Nawigacja w głąb folderu
+            const targetProfileId = btn.payload.args;
+            if (targetProfileId && fullLayoutData.layouts.find((l: any) => l.id === targetProfileId)) {
+                setProfileStack([...profileStack, fullLayoutData.active_layout_id]);
+                switchProfile(targetProfileId);
+            }
         }
     };
 
-    const handleVolumeChange = (appName: string, volume: number) => {
-        socket.emit('set_audio_volume', { app: appName, volume: volume });
+    const handleGoBack = () => {
+        if (profileStack.length === 0) return;
+        const newStack = [...profileStack];
+        const previousProfileId = newStack.pop();
+        setProfileStack(newStack);
+        if (previousProfileId) {
+            switchProfile(previousProfileId);
+        }
+    };
+
+    const handleSwitchProfileFromHeader = (id: string) => {
+        setProfileStack([]);
+        switchProfile(id);
     };
 
     const saveLayout = async () => {
@@ -76,23 +102,12 @@ export default function App() {
         }
     };
 
-    const switchProfile = (profileId: string) => {
-        const profile = fullLayoutData.layouts.find((l: any) => l.id === profileId);
-        if (!profile) return;
-
-        const updatedData = { ...fullLayoutData, active_layout_id: profileId };
-        setFullLayoutData(updatedData);
-        setActiveButtons(profile.buttons);
-    };
-
     const addNewProfile = () => {
         const name = prompt("Podaj nazwę nowego profilu:");
         if (!name) return;
 
         const gridInput = prompt("Podaj wymiary siatki w formacie KOLUMNY:WIERSZE (np. 8:4, 4:4, 16:8):", "8:4");
-        let cols = 8;
-        let rows = 4;
-
+        let cols = 8, rows = 4;
         if (gridInput && gridInput.includes(':')) {
             const parts = gridInput.split(':');
             cols = parseInt(parts[0]) || 8;
@@ -100,15 +115,51 @@ export default function App() {
         }
 
         const newProfile = { id: "profile_" + Date.now(), name, grid: { columns: cols, rows: rows }, buttons: [] };
-
         const updatedData = {
             ...fullLayoutData,
             active_layout_id: newProfile.id,
             layouts: [...fullLayoutData.layouts, newProfile]
         };
 
+        setProfileStack([]);
         setFullLayoutData(updatedData);
         setActiveButtons([]);
+    };
+
+    const deleteProfile = () => {
+        if (fullLayoutData.layouts.length <= 1) {
+            alert("Nie możesz usunąć jedynego profilu!");
+            return;
+        }
+
+        const profileToDeleteId = fullLayoutData.active_layout_id;
+        const profileToDelete = fullLayoutData.layouts.find((l: any) => l.id === profileToDeleteId);
+
+        if (!window.confirm(`Czy na pewno chcesz usunąć profil "${profileToDelete?.name}"? Kafelki (Foldery) z innych układów prowadzące tutaj zostaną usunięte.`)) {
+            return;
+        }
+
+        const updatedLayouts = fullLayoutData.layouts
+            .filter((l: any) => l.id !== profileToDeleteId)
+            .map((layout: any) => {
+                const cleanedButtons = layout.buttons.filter((btn: TileButton) => {
+                    const isDeadLink = btn.type === 'FOLDER' && btn.payload.args === profileToDeleteId;
+                    return !isDeadLink;
+                });
+                return { ...layout, buttons: cleanedButtons };
+            });
+
+        const newActiveId = updatedLayouts[0].id;
+
+        const updatedData = {
+            ...fullLayoutData,
+            active_layout_id: newActiveId,
+            layouts: updatedLayouts
+        };
+
+        setProfileStack([]);
+        setFullLayoutData(updatedData);
+        setActiveButtons(updatedLayouts[0].buttons);
     };
 
     if (!fullLayoutData) return <h2 style={{ textAlign: 'center', marginTop: 50, color: 'white' }}>Ładowanie doDECK...</h2>;
@@ -119,10 +170,13 @@ export default function App() {
             <Header
                 layoutData={fullLayoutData}
                 isEditMode={isEditMode}
-                onSwitchProfile={switchProfile}
+                profileStack={profileStack}
+                onSwitchProfile={handleSwitchProfileFromHeader}
+                onGoBack={handleGoBack}
                 onAddProfile={addNewProfile}
+                onDeleteProfile={deleteProfile}
                 onToggleEdit={() => setIsEditMode(!isEditMode)}
-                onAddTile={() => setActiveButtons([...activeButtons, { id: Date.now().toString(), title: "NOWY", color: "#e67e22", type: "ACTION", x: 1, y: 1, w: 1, h: 1, payload: { command: "hotkey", args: "enter" } }])}
+                onAddTile={() => setActiveButtons([...activeButtons, { id: Date.now().toString(), title: "NOWY FOLDER", color: "#8e44ad", type: "FOLDER", x: 1, y: 1, w: 1, h: 1, payload: { args: "" } }])}
                 onSave={saveLayout}
             />
 
@@ -144,6 +198,7 @@ export default function App() {
             {editingTile && (
                 <EditorModal
                     tile={editingTile}
+                    profiles={fullLayoutData.layouts}
                     onSave={(updated) => {
                         setActiveButtons(activeButtons.map(b => b.id === updated.id ? updated : b));
                         setEditingTile(null);
@@ -160,10 +215,9 @@ export default function App() {
                 <AudioMixerModal
                     appsVolume={audioData}
                     onClose={() => setAudioData(null)}
-                    onVolumeChange={handleVolumeChange}
+                    onVolumeChange={(app, vol) => socket.emit('set_audio_volume', { app, volume: vol })}
                 />
             )}
-
         </div>
     );
 }
