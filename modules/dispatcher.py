@@ -61,7 +61,10 @@ DEFAULT_LAYOUT = {
                     "y": 1,
                     "w": 1,
                     "h": 1,
-                    "payload": {"command": "open_url", "args": "https://www.onet.pl/"},
+                    "payload": {
+                        "command": "open_url",
+                        "args": "https://www.onet.pl/",
+                    },
                 },
                 {
                     "id": "3",
@@ -237,7 +240,10 @@ def register_dispatcher_events(socketio):
 
     @socketio.on("trigger_action")
     def handle_trigger(data):
-        success, msg = execute_command(data.get("command"), data.get("args", ""))
+        success, msg = execute_command(
+            data.get("command"),
+            data.get("args", ""),
+        )
         if success:
             print(f"🚀 [WS] {msg}")
         else:

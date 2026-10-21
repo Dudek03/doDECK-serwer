@@ -2,8 +2,6 @@ from flask import Blueprint, jsonify, request
 from pycaw.pycaw import (
     AudioUtilities,
     ISimpleAudioVolume,
-    EDataFlow,
-    ERole,
     IAudioEndpointVolume,
 )
 import comtypes
@@ -74,7 +72,9 @@ def setAppVolume():
                 {"status": "OK", "ustawiona_głośność": int(volume_value * 100)}
             ), 200
         else:
-            return jsonify({"error": f"Nie znaleziono aplikacji: {app_name}"}), 404
+            return jsonify(
+                {"error": f"Nie znaleziono aplikacji: {app_name}"},
+            ), 404
     except Exception as e:
         print(f"[ERROR] {e}")
         return jsonify({"error": str(e)}), 500
@@ -85,7 +85,11 @@ def muteAllApps():
     try:
         comtypes.CoInitialize()
         devices = AudioUtilities.GetSpeakers()
-        interface = devices.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
+        interface = devices.Activate(
+            IAudioEndpointVolume._iid_,
+            CLSCTX_ALL,
+            None,
+        )
         volume = interface.QueryInterface(IAudioEndpointVolume)
         mute = volume.GetMute()
         volume.SetMute(bool(not mute), None)
@@ -108,33 +112,48 @@ def mic3():
         return jsonify({"error: ": str(e)}), 500
 
 
+def get_session_audio_data(session):
+    """Pobiera dane audio dla pojedynczej sesji. Zwraca słownik lub None."""
+    if not session.Process:
+        return None
+
+    try:
+        volume = session._ctl.QueryInterface(ISimpleAudioVolume)
+        muted = volume.GetMute()
+
+        if muted != 0:
+            return None
+
+        return {
+            "App": session.Process.name(),
+            "Volume": round(volume.GetMasterVolume() * 100),
+            "isMuted": muted,
+        }
+    except Exception:
+        return None
+
+
 def register_audio_events(socketio):
     @socketio.on("get_audio_volume")
     def handle_get_audio():
         """Zwraca listę aplikacji z ich głośnością przez WebSocket"""
         try:
             comtypes.CoInitialize()
-            apps = []
             sessions = AudioUtilities.GetAllSessions()
+
+            apps = []
             for session in sessions:
-                if session.Process:
-                    try:
-                        volume = session._ctl.QueryInterface(ISimpleAudioVolume)
-                        app_name = session.Process.name()
-                        volume_level = volume.GetMasterVolume()
-                        muted = volume.GetMute()
-                        if muted == 0:
-                            apps.append(
-                                {
-                                    "App": app_name,
-                                    "Volume": round(volume_level * 100),
-                                    "isMuted": muted,
-                                }
-                            )
-                    except:
-                        continue
-            # Odsyłamy dane tylko do pytającego (nie do wszystkich)
-            socketio.emit("audio_volume_data", {"ilosc": len(apps), "aplikacje": apps})
+                app_data = get_session_audio_data(session)
+                if app_data:
+                    apps.append(app_data)
+
+            socketio.emit(
+                "audio_volume_data",
+                {
+                    "ilosc": len(apps),
+                    "aplikacje": apps,
+                },
+            )
         except Exception as e:
             print(f"❌ [WS] Błąd pobierania audio: {e}")
 
@@ -160,7 +179,7 @@ def register_audio_events(socketio):
                     try:
                         volume = session._ctl.QueryInterface(ISimpleAudioVolume)
                         volume.SetMasterVolume(volume_value, None)
-                    except:
+                    except Exception:
                         continue
         except Exception as e:
             print(f"❌ [WS] Błąd ustawiania głośności: {e}")
@@ -170,7 +189,11 @@ def register_audio_events(socketio):
         try:
             comtypes.CoInitialize()
             devices = AudioUtilities.GetSpeakers()
-            interface = devices.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
+            interface = devices.Activate(
+                IAudioEndpointVolume._iid_,
+                CLSCTX_ALL,
+                None,
+            )
             volume = interface.QueryInterface(IAudioEndpointVolume)
             mute = volume.GetMute()
             volume.SetMute(bool(not mute), None)
@@ -185,7 +208,10 @@ def register_audio_events(socketio):
             APPCOMMAND_MICROPHONE_VOLUME_MUTE = 0x180000
             hwnd_active = win32gui.GetForegroundWindow()
             win32api.SendMessage(
-                hwnd_active, WM_APPCOMMAND, None, APPCOMMAND_MICROPHONE_VOLUME_MUTE
+                hwnd_active,
+                WM_APPCOMMAND,
+                None,
+                APPCOMMAND_MICROPHONE_VOLUME_MUTE,
             )
             print("🎙️ [WS] Wykonano Mute Mikrofonu")
         except Exception as e:
