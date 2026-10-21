@@ -85,9 +85,19 @@ export default function EditorModal({ tile, profiles, onSave, onCancel, onDelete
                         <label className="modal-label">Komenda:</label>
                         <select className="modal-input" value={editingTile.payload.command} onChange={e => updatePayload('command', e.target.value)}>
                             <option value="hotkey">Skrót klawiszowy</option>
+                            <option value="write">Wpisz tekst (Makro)</option>
                             <option value="open_url">Strona WWW</option>
                         </select>
-                        <input className="modal-input" value={editingTile.payload.args || ''} onChange={e => updatePayload('args', e.target.value)} placeholder="Parametr..." />
+                        <input
+                            className="modal-input"
+                            value={editingTile.payload.args || ''}
+                            onChange={e => updatePayload('args', e.target.value)}
+                            placeholder={
+                                editingTile.payload.command === 'write' ? "placeholder" :
+                                    editingTile.payload.command === 'hotkey' ? "np. ctrl+c, alt+tab" :
+                                        "Parametr..."
+                            }
+                        />
                     </>
                 )}
 

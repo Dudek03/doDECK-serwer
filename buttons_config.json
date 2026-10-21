@@ -15,7 +15,7 @@
                     "type": "ACTION",
                     "w": 1,
                     "x": 4,
-                    "y": 2
+                    "y": 1
                 },
                 {
                     "color": "#1a1a1a",
@@ -28,7 +28,7 @@
                     "title": "task-manager",
                     "type": "ACTION",
                     "w": 1,
-                    "x": 3,
+                    "x": 2,
                     "y": 2
                 },
                 {
@@ -55,9 +55,9 @@
                     },
                     "title": "onet",
                     "type": "ACTION",
-                    "w": 4,
+                    "w": 1,
                     "x": 1,
-                    "y": 4
+                    "y": 2
                 },
                 {
                     "color": "#2ecc71",
@@ -68,7 +68,7 @@
                     },
                     "title": "Mixer Audio",
                     "type": "WIDGET",
-                    "w": 2,
+                    "w": 1,
                     "x": 1,
                     "y": 3
                 },
@@ -83,7 +83,7 @@
                     "type": "LIVE DATA",
                     "w": 2,
                     "x": 3,
-                    "y": 3
+                    "y": 2
                 },
                 {
                     "color": "#2ecc71",
@@ -96,8 +96,8 @@
                     "title": "prev",
                     "type": "ACTION",
                     "w": 1,
-                    "x": 2,
-                    "y": 1
+                    "x": 3,
+                    "y": 3
                 },
                 {
                     "color": "#2ecc71",
@@ -109,23 +109,9 @@
                     },
                     "title": "next",
                     "type": "ACTION",
-                    "w": 3,
-                    "x": 2,
-                    "y": 5
-                },
-                {
-                    "color": "#e67e22",
-                    "h": 1,
-                    "id": "1789897901979",
-                    "payload": {
-                        "args": "enter",
-                        "command": "hotkey"
-                    },
-                    "title": "NOWY",
-                    "type": "ACTION",
                     "w": 1,
                     "x": 4,
-                    "y": 1
+                    "y": 3
                 },
                 {
                     "color": "#2623e7",
@@ -183,22 +169,36 @@
                     "title": "test",
                     "type": "WORKSPACE",
                     "w": 1,
-                    "x": 1,
-                    "y": 1
+                    "x": 2,
+                    "y": 3
                 },
                 {
                     "color": "#e67e22",
                     "h": 1,
                     "id": "1791279874048",
                     "payload": {
-                        "args": "enter",
+                        "args": "\"siemaneczko ziomeczku\"",
+                        "command": "write"
+                    },
+                    "title": "pisanie",
+                    "type": "ACTION",
+                    "w": 1,
+                    "x": 2,
+                    "y": 1
+                },
+                {
+                    "color": "#0006f2",
+                    "h": 1,
+                    "id": "1792596801611",
+                    "payload": {
+                        "args": "Win+d",
                         "command": "hotkey"
                     },
                     "title": "NOWY",
                     "type": "ACTION",
                     "w": 1,
-                    "x": 2,
-                    "y": 2
+                    "x": 1,
+                    "y": 1
                 }
             ],
             "grid": {

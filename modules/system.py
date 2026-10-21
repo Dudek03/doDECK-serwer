@@ -22,7 +22,13 @@ def register_socket_events(socketio):
             cpuUsage = psutil.cpu_percent(interval=0.1, percpu=True)
             ramUsage = psutil.virtual_memory().percent
 
-            socketio.emit("system_update", {"cpu": max(cpuUsage), "ram": ramUsage})
+            socketio.emit(
+                "system_update",
+                {
+                    "cpu": max(cpuUsage),
+                    "ram": ramUsage,
+                },
+            )
             socketio.sleep(3)
 
     @socketio.on("subscribe_telemetry")

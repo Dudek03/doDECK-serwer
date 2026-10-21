@@ -9,7 +9,7 @@ import AudioMixerModal from './components/AudioMixerModal';
 
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
-import './styles.css';
+import './styles/styles.css';
 
 const socket = io();
 

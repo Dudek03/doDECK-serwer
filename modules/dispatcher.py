@@ -120,6 +120,9 @@ def execute_command(command, args):
             keyboard.send(args)
             return True, f"Wysłano skrót: {args}"
 
+        elif command == "write":
+            keyboard.write(args, exact=True)
+
         elif command == "open_url":
             webbrowser.open(args)
             return True, f"Otwarto stronę: {args}"
@@ -130,7 +133,6 @@ def execute_command(command, args):
                 exec_path = target.get("exec_path", "")
                 matched_windows = gw.getWindowsWithTitle(title)
 
-                # Wskrzeszanie zamkniętych okien
                 if not matched_windows and exec_path:
                     try:
                         os.startfile(exec_path)
@@ -204,7 +206,7 @@ def scan_windows():
                     process = psutil.Process(pid.value)
                     exec_path = process.exe()
             except Exception:
-                pass  # Ignorujemy chronione procesy systemowe
+                pass
 
             windows.append(
                 {
