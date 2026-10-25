@@ -6,6 +6,7 @@ import Header from './components/Header';
 import DevicePreview from './components/DevicePreview';
 import EditorModal from './components/EditorModal';
 import AudioMixerModal from './components/AudioMixerModal';
+import PairingModal from './components/PairingModal';
 
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
@@ -20,8 +21,8 @@ export default function App() {
     const [systemData, setSystemData] = useState({ cpu: '...', ram: '...' });
     const [editingTile, setEditingTile] = useState<TileButton | null>(null);
     const [audioData, setAudioData] = useState<any>(null);
+    const [isPairingOpen, setIsPairingOpen] = useState(false)
 
-    // Stos nawigacyjny LIFO
     const [profileStack, setProfileStack] = useState<string[]>([]);
 
     useEffect(() => {
@@ -65,7 +66,6 @@ export default function App() {
         } else if (btn.type === 'WIDGET' && btn.payload.command === 'open_mixer') {
             socket.emit('get_audio_volume');
         } else if (btn.type === 'FOLDER') {
-            // Nawigacja w głąb folderu
             const targetProfileId = btn.payload.args;
             if (targetProfileId && fullLayoutData.layouts.find((l: any) => l.id === targetProfileId)) {
                 setProfileStack([...profileStack, fullLayoutData.active_layout_id]);
@@ -178,6 +178,7 @@ export default function App() {
                 onToggleEdit={() => setIsEditMode(!isEditMode)}
                 onAddTile={() => setActiveButtons([...activeButtons, { id: Date.now().toString(), title: "NOWY FOLDER", color: "#8e44ad", type: "FOLDER", x: 1, y: 1, w: 1, h: 1, payload: { args: "" } }])}
                 onSave={saveLayout}
+                onOpenPairing={() => setIsPairingOpen(true)}
             />
 
             <DevicePreview
@@ -217,6 +218,11 @@ export default function App() {
                     onClose={() => setAudioData(null)}
                     onVolumeChange={(app, vol) => socket.emit('set_audio_volume', { app, volume: vol })}
                 />
+            )}
+
+            {isPairingOpen && (
+                <PairingModal
+                    onClose={() => setIsPairingOpen(false)} />
             )}
         </div>
     );

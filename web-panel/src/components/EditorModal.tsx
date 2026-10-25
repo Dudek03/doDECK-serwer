@@ -53,7 +53,7 @@ export default function EditorModal({ tile, profiles, onSave, onCancel, onDelete
 
                 <label className="modal-label">Typ:</label>
                 <select className="modal-input" value={editingTile.type} onChange={e => {
-                    const newType = e.target.value;
+                    const newType = e.target.value as TileButton['type'];
                     let defPayload = {};
                     if (newType === 'ACTION') defPayload = { command: 'hotkey', args: '' };
                     else if (newType === 'WIDGET') defPayload = { command: 'open_mixer' };

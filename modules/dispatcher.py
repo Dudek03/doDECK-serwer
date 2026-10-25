@@ -1,4 +1,5 @@
 from flask import Blueprint, jsonify, request
+from modules.security import verify_socket_payload
 import keyboard
 import os
 import webbrowser
@@ -7,6 +8,7 @@ import pygetwindow as gw
 import time
 import psutil
 import ctypes
+from modules.security import get_or_create_secret, get_local_ip, verify_socket_payload
 
 dispatcher_bp = Blueprint("dispatcher", __name__)
 CONFIG_FILE = "buttons_config.json"
@@ -224,6 +226,19 @@ def scan_windows():
     return jsonify({"status": "ok", "windows": windows})
 
 
+@dispatcher_bp.route("/get_pairing_data", methods=["GET"])
+def get_pairing_data():
+    """Udostępnia dane do kodu QR. Zablokowane tylko dla localhosta!"""
+    # 127.0.0.1 (lub ::1) oznacza, że nikt w kawiarni nie wyciągnie klucza przez wpisanie Twojego IP w przeglądarkę
+    if request.remote_addr not in ['127.0.0.1', '::1']:
+        return jsonify({"error": "Brak uprawnień. Parowanie dostępne tylko lokalnie na PC."}), 403
+        
+    return jsonify({
+        "ip": get_local_ip(),
+        "port": 5000,
+        "secret": get_or_create_secret()
+    })
+
 @dispatcher_bp.route("/trigger", methods=["POST"])
 def trigger_action_rest():
     """Bramka dla skryptów zewnętrznych i starego Web Edytora"""
@@ -240,6 +255,9 @@ def register_dispatcher_events(socketio):
 
     @socketio.on("trigger_action")
     def handle_trigger(data):
+        if not verify_socket_payload(data, 'action'):
+            return
+
         success, msg = execute_command(
             data.get("command"),
             data.get("args", ""),
@@ -248,3 +266,21 @@ def register_dispatcher_events(socketio):
             print(f"🚀 [WS] {msg}")
         else:
             print(f"❌ [WS] Błąd: {msg}")
+
+    @socketio.on("trigger_macro")
+    def handle_macro(data):
+        if not verify_socket_payload(data, 'macro'):
+            return
+
+        steps = data.get('steps', [])
+        print(f"🚀 [WS] Wykonywanie makra ({len(steps)} kroków)...")
+        
+        for step in steps:
+            command = step.get('command')
+            args = step.get('args', '')
+            delay_ms = step.get('delay', 0)
+            
+            execute_command(command, args)
+            
+            if delay_ms > 0:
+                time.sleep(delay_ms / 1000.0)

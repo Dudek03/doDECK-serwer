@@ -1,13 +1,14 @@
 from modules.dispatcher import register_dispatcher_events
 from modules.audio import register_audio_events
 from modules.system import register_socket_events
+from modules.security import get_or_create_secret
+from modules.security import get_local_ip
 from modules import blueprints
 from flask_socketio import SocketIO
 from flask_cors import CORS
-from flask import Flask
+from flask import Flask, request, jsonify
 from PIL import Image, ImageDraw
 import webbrowser
-import socket
 import os
 import pystray
 import threading
@@ -17,7 +18,7 @@ Image.init()
 
 app = Flask(__name__, static_folder="web-panel/dist", static_url_path="/")
 CORS(app)
-socketio = SocketIO(app, cors_allower_origins="*")
+socketio = SocketIO(app, cors_allowed_origins="*")
 for bp in blueprints:
     app.register_blueprint(bp, url_prefix=f"/{bp.name}")
 
@@ -32,6 +33,19 @@ def index():
     return app.send_static_file("index.html")
 
 
+@app.route("/api/pairing")
+def get_pairing_data():
+    """Udostępnia dane do kodu QR. Zablokowane tylko dla localhosta!"""
+    if request.remote_addr != "127.0.0.1":
+        return jsonify(
+            {"error": "Brak uprawnień. Parowanie dostępne tylko na PC."}
+        ), 403
+
+    return jsonify(
+        {"ip": get_local_ip(), "port": 5000, "secret": get_or_create_secret()}
+    )
+
+
 def create_default_icon():
     """Generuje prostą zieloną ikonkę z napisem 'dD', jeśli nie masz własnego pliku"""
     image = Image.new("RGB", (64, 64), color=(46, 204, 113))
@@ -44,17 +58,6 @@ def quit_application(icon, item):
     """Zamyka aplikację i serwer po kliknięciu 'Zakończ'"""
     icon.stop()
     os._exit(0)
-
-
-def get_local_ip():
-    try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.connect(("8.8.8.8", 80))
-        ip = s.getsockname()[0]
-        s.close()
-        return ip
-    except Exception:
-        return "127.0.0.1"
 
 
 def open_web_editor(icon, item):

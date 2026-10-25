@@ -9,9 +9,10 @@ interface HeaderProps {
     onAddTile: () => void;
     onSave: () => void;
     onGoBack: () => void;
+    onOpenPairing: () => void;
 }
 
-export default function Header({ layoutData, isEditMode, profileStack, onSwitchProfile, onAddProfile, onDeleteProfile, onToggleEdit, onAddTile, onSave, onGoBack }: HeaderProps) {
+export default function Header({ layoutData, isEditMode, profileStack, onSwitchProfile, onAddProfile, onDeleteProfile, onToggleEdit, onAddTile, onSave, onGoBack, onOpenPairing }: HeaderProps) {
     if (!layoutData) return null;
 
     return (
@@ -40,6 +41,9 @@ export default function Header({ layoutData, isEditMode, profileStack, onSwitchP
                     {isEditMode ? 'Wyłącz Edycję' : 'Tryb Edycji'}
                 </button>
                 {isEditMode && <button className="btn btn-green" onClick={onSave}>Zapisz układ</button>}
+                <button className="btn btn-dark" onClick={onOpenPairing} style={{ marginRight: 15 }}>
+                    Paruj
+                </button>
             </div>
         </div>
     );
