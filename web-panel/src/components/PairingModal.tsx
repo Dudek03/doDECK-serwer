@@ -38,6 +38,14 @@ export default function PairingModal({ onClose }: PairingModalProps) {
                     )}
                 </div>
 
+                <div style={{ background: '#fff', padding: '15px', borderRadius: '10px' }}>
+                    <p style={{ color: '#000', fontWeight: 'bold', margin: '0 0 10px 0' }}>Przeglądarka (iOS/Web)</p>
+                    <QRCodeSVG
+                        value={`http://${pairingData.ip}:5000/?secret=${pairingData.secret}`}
+                        size={150}
+                    />
+                </div>
+
                 <div style={{ marginTop: '20px' }}>
                     {pairingData && <p style={{ color: '#5865F2', fontWeight: 'bold' }}>IP: {pairingData.ip}</p>}
                     <button className="btn btn-dark" style={{ width: '100%', marginTop: '10px' }} onClick={onClose}>
