@@ -1,5 +1,5 @@
 {
-    "active_layout_id": "default",
+    "active_layout_id": "profile_1793018286954",
     "layouts": [
         {
             "buttons": [
@@ -191,11 +191,10 @@
                     "h": 1,
                     "id": "1792596801611",
                     "payload": {
-                        "args": "Win+d",
-                        "command": "hotkey"
+                        "args": "profile_1793018286954"
                     },
-                    "title": "NOWY",
-                    "type": "ACTION",
+                    "title": "folder",
+                    "type": "FOLDER",
                     "w": 1,
                     "x": 1,
                     "y": 1
@@ -207,6 +206,81 @@
             },
             "id": "default",
             "name": "Główny Panel"
+        },
+        {
+            "id": "profile_1793018286954",
+            "name": "folder",
+            "grid": {
+                "columns": 4,
+                "rows": 4
+            },
+            "buttons": [
+                {
+                    "id": "1793018329067",
+                    "title": "widget",
+                    "color": "#8e44ad",
+                    "type": "WIDGET",
+                    "x": 1,
+                    "y": 1,
+                    "w": 2,
+                    "h": 2,
+                    "payload": {
+                        "command": "open_mixer"
+                    }
+                },
+                {
+                    "id": "1793018384918",
+                    "title": "workspace",
+                    "color": "#43ad58",
+                    "type": "WORKSPACE",
+                    "x": 3,
+                    "y": 1,
+                    "w": 1,
+                    "h": 1,
+                    "payload": {
+                        "command": "workspace",
+                        "args": [
+                            {
+                                "exec_path": "C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe",
+                                "height": 848,
+                                "title": "web-panel – Brave",
+                                "width": 1550,
+                                "x": -7,
+                                "y": -7
+                            },
+                            {
+                                "exec_path": "C:\\Windows\\System32\\Taskmgr.exe",
+                                "height": 600,
+                                "title": "Menedżer zadań",
+                                "width": 1080,
+                                "x": 119,
+                                "y": 140
+                            },
+                            {
+                                "exec_path": "C:\\Windows\\explorer.exe",
+                                "height": 574,
+                                "title": "Eksplorator plików",
+                                "width": 939,
+                                "x": 231,
+                                "y": 213
+                            }
+                        ]
+                    }
+                },
+                {
+                    "id": "1793018508262",
+                    "title": "NOWY FOLDER",
+                    "color": "#4366ad",
+                    "type": "FOLDER",
+                    "x": 3,
+                    "y": 2,
+                    "w": 1,
+                    "h": 1,
+                    "payload": {
+                        "args": ""
+                    }
+                }
+            ]
         }
     ]
 }

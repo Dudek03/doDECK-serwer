@@ -60,15 +60,16 @@ def verify_socket_payload(data_dict, action_type):
     except ValueError:
         return False
 
-    # Odtwarzamy oryginalny ciąg znaków, który podpisał frontend
     if action_type == "action":
-        # Dla pojedynczej akcji podpisujemy: command + args + timestamp
-        raw_string = (
-            f"{data_dict.get('command', '')}{data_dict.get('args', '')}{timestamp}"
-        )
+        args_data = data_dict.get("args", "")
+
+        if isinstance(args_data, (dict, list)):
+            args_str = json.dumps(args_data, separators=(",", ":"), ensure_ascii=False)
+        else:
+            args_str = str(args_data)
+
+        raw_string = f"{data_dict.get('command', '')}{args_str}{timestamp}"
     elif action_type == "macro":
-        # Dla makra podpisujemy JSONa ze schodkami + timestamp
-        # Używamy separators=(',', ':') by pozbyć się spacji, co ułatwia zgodność z JavaScript
         steps_str = json.dumps(data_dict.get("steps", []), separators=(",", ":"))
         raw_string = f"{steps_str}{timestamp}"
     else:

@@ -24,12 +24,18 @@ export default function App() {
     const [audioData, setAudioData] = useState<any>(null);
     const [isPairingOpen, setIsPairingOpen] = useState(false)
 
+    const [isClientMode, setIsClientMode] = useState<boolean>(() => {
+        return localStorage.getItem('dodeck_client_mode') === 'true';
+    });
+
     const [secretKey, setSecretKey] = useState<string | null>((): string | null => {
         const urlParams = new URLSearchParams(window.location.search);
         const secretFromUrl = urlParams.get('secret');
 
         if (secretFromUrl) {
             localStorage.setItem('dodeck_secret', secretFromUrl);
+            localStorage.setItem('dodeck_client_mode', 'true');
+            setIsClientMode(true);
             return secretFromUrl;
         }
 
@@ -113,15 +119,21 @@ export default function App() {
         const timestamp = (Date.now() / 1000).toString();
 
         if (btn.type === 'ACTION' || btn.type === 'WORKSPACE') {
-            const command = btn.payload.command;
-            const args = btn.payload.args || '';
+            const command = btn.payload.command || '';
 
-            const rawString = `${command}${args}${timestamp}`;
+            let argsForSignature = btn.payload.args || '';
+            if (typeof argsForSignature === 'object') {
+                argsForSignature = JSON.stringify(argsForSignature);
+            }
+
+            const timestamp = (Date.now() / 1000).toString();
+
+            const rawString = `${command}${argsForSignature}${timestamp}`;
             const signature = CryptoJS.HmacSHA256(rawString, secretKey).toString(CryptoJS.enc.Hex);
 
             socket.emit('trigger_action', {
                 command: command,
-                args: args,
+                args: btn.payload.args || '',
                 timestamp: timestamp,
                 signature: signature
             });
@@ -221,19 +233,66 @@ export default function App() {
 
     return (
         <div>
-            <Header
-                layoutData={fullLayoutData}
-                isEditMode={isEditMode}
-                profileStack={profileStack}
-                onSwitchProfile={handleSwitchProfileFromHeader}
-                onGoBack={handleGoBack}
-                onAddProfile={addNewProfile}
-                onDeleteProfile={deleteProfile}
-                onToggleEdit={() => setIsEditMode(!isEditMode)}
-                onAddTile={() => setActiveButtons([...activeButtons, { id: Date.now().toString(), title: "NOWY FOLDER", color: "#8e44ad", type: "FOLDER", x: 1, y: 1, w: 1, h: 1, payload: { args: "" } }])}
-                onSave={saveLayout}
-                onOpenPairing={() => setIsPairingOpen(true)}
-            />
+            {!isClientMode && (
+                <>
+                    <Header
+                        layoutData={fullLayoutData}
+                        isEditMode={isEditMode}
+                        profileStack={profileStack}
+                        onSwitchProfile={handleSwitchProfileFromHeader}
+                        onGoBack={handleGoBack}
+                        onAddProfile={addNewProfile}
+                        onDeleteProfile={deleteProfile}
+                        onToggleEdit={() => setIsEditMode(!isEditMode)}
+                        onAddTile={() => setActiveButtons([...activeButtons, { id: Date.now().toString(), title: "NOWY FOLDER", color: "#8e44ad", type: "FOLDER", x: 1, y: 1, w: 1, h: 1, payload: { args: "" } }])}
+                        onSave={saveLayout}
+                        onOpenPairing={() => setIsPairingOpen(true)}
+                    />
+
+                    {editingTile && (
+                        <EditorModal
+                            tile={editingTile}
+                            profiles={fullLayoutData.layouts}
+                            onSave={(updated) => {
+                                setActiveButtons(activeButtons.map(b => b.id === updated.id ? updated : b));
+                                setEditingTile(null);
+                            }}
+                            onCancel={() => setEditingTile(null)}
+                            onDelete={(id) => {
+                                setActiveButtons(activeButtons.filter(b => b.id !== id));
+                                setEditingTile(null);
+                            }}
+                        />
+                    )}
+
+                    {isPairingOpen && (
+                        <PairingModal
+                            onClose={() => setIsPairingOpen(false)}
+                        />
+                    )}
+                </>
+            )}
+
+            {isClientMode && profileStack.length > 0 && (
+                <button
+                    onClick={handleGoBack}
+                    style={{
+                        margin: '10px',
+                        padding: '15px',
+                        backgroundColor: '#3498db',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '10px',
+                        fontWeight: 'bold',
+                        fontSize: '18px',
+                        cursor: 'pointer',
+                        display: 'block',
+                        width: 'calc(100% - 20px)'
+                    }}
+                >
+                    ⬅ Wstecz
+                </button>
+            )}
 
             <DevicePreview
                 buttons={activeButtons}
@@ -250,33 +309,12 @@ export default function App() {
                 onTileEdit={setEditingTile}
             />
 
-            {editingTile && (
-                <EditorModal
-                    tile={editingTile}
-                    profiles={fullLayoutData.layouts}
-                    onSave={(updated) => {
-                        setActiveButtons(activeButtons.map(b => b.id === updated.id ? updated : b));
-                        setEditingTile(null);
-                    }}
-                    onCancel={() => setEditingTile(null)}
-                    onDelete={(id) => {
-                        setActiveButtons(activeButtons.filter(b => b.id !== id));
-                        setEditingTile(null);
-                    }}
-                />
-            )}
-
             {audioData && (
                 <AudioMixerModal
                     appsVolume={audioData}
                     onClose={() => setAudioData(null)}
                     onVolumeChange={(app, vol) => socket.emit('set_audio_volume', { app, volume: vol })}
                 />
-            )}
-
-            {isPairingOpen && (
-                <PairingModal
-                    onClose={() => setIsPairingOpen(false)} />
             )}
         </div>
     );
