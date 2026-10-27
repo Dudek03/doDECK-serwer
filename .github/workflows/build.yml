@@ -3,6 +3,8 @@ name: Build Backend (Windows EXE)
 on:
   push:
     branches: ["master"]
+  pull_request:
+    branches: ["master"]
 
 jobs:
   build-windows:
@@ -11,19 +13,41 @@ jobs:
       - name: Pobranie kodu
         uses: actions/checkout@v4
 
+      - name: Instalacja środowiska Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: web-panel/package-lock.json
+
+      - name: Instalacja zależności i testy frontendu
+        run: |
+          cd web-panel
+          npm ci
+          npm test
+          npm run build
+
       - name: Instalacja środowiska Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: "pip"
 
-      - name: Instalacja zależności
+      - name: Instalacja zależności backendu
         run: |
           python -m pip install --upgrade pip
           pip install pyinstaller
           pip install -r requirements.txt
 
-      - name: Kompilacja do EXE
-        run: pyinstaller --onefile --noconsole --name DoDeckServer serwer.py
+      - name: Uruchomienie testów backendu
+        env:
+          PYTHONIOENCODING: "utf-8"
+        run: |
+          python -m unittest discover -s tests
+
+      - name: Kompilacja do EXE (PyInstaller)
+        run: |
+          pyinstaller --onefile --noconsole --name DoDeckServer --add-data "web-panel/dist;web-panel/dist" serwer.py
 
       - name: Udostępnienie pliku EXE
         uses: actions/upload-artifact@v4

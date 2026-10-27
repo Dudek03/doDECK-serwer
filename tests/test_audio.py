@@ -6,6 +6,7 @@ from modules.audio import (
     audio_bp,
     get_session_audio_data,
     register_audio_events,
+    com_context,
 )
 
 
@@ -39,6 +40,23 @@ class TestAudio(unittest.TestCase):
 
         result = get_session_audio_data(mock_session)
         self.assertIsNone(result)
+
+    @patch("modules.audio.comtypes.CoUninitialize")
+    @patch("modules.audio.comtypes.CoInitialize")
+    def test_com_context_guarantees_cleanup(self, mock_init, mock_uninit):
+        with com_context():
+            mock_init.assert_called_once()
+            mock_uninit.assert_not_called()
+        mock_uninit.assert_called_once()
+
+    @patch("modules.audio.comtypes.CoUninitialize")
+    @patch("modules.audio.comtypes.CoInitialize")
+    def test_com_context_cleans_up_on_exception(self, mock_init, mock_uninit):
+        with self.assertRaises(ValueError):
+            with com_context():
+                raise ValueError("Boom")
+        mock_init.assert_called_once()
+        mock_uninit.assert_called_once()
 
     @patch("modules.audio.AudioUtilities")
     def test_get_session_audio_data_muted(self, mock_utils):

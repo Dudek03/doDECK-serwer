@@ -10,13 +10,19 @@ from flask import Flask, request, jsonify
 from PIL import Image, ImageDraw
 import webbrowser
 import os
+import sys
 import pystray
 import threading
 
 Image.init()
 
+if getattr(sys, "frozen", False):
+    BASE_DIR = sys._MEIPASS
+else:
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-app = Flask(__name__, static_folder="web-panel/dist", static_url_path="/")
+static_dir = os.path.join(BASE_DIR, "web-panel", "dist")
+app = Flask(__name__, static_folder=static_dir, static_url_path="/")
 CORS(app)
 socketio = SocketIO(app, cors_allowed_origins="*")
 for bp in blueprints:
@@ -36,7 +42,7 @@ def index():
 @app.route("/api/pairing")
 def get_pairing_data():
     """Udostępnia dane do kodu QR. Zablokowane tylko dla localhosta!"""
-    if request.remote_addr != "127.0.0.1":
+    if request.remote_addr not in ["127.0.0.1", "::1"]:
         return jsonify(
             {"error": "Brak uprawnień. Parowanie dostępne tylko na PC."}
         ), 403
@@ -84,3 +90,7 @@ def start_server():
     server_thread.start()
 
     setup_tray_icon()
+
+
+if __name__ == "__main__":
+    start_server()
