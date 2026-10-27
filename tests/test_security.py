@@ -4,14 +4,52 @@ import json
 import time
 import hmac
 import hashlib
+from flask import Flask, jsonify
 from modules.security import (
     get_local_ip,
     get_or_create_secret,
+    rotate_secret,
     verify_socket_payload,
+    is_localhost,
+    require_localhost,
+    SEEN_SIGNATURES,
 )
 
 
 class TestSecurity(unittest.TestCase):
+    def setUp(self):
+        SEEN_SIGNATURES.clear()
+
+    def test_is_localhost(self):
+        self.assertTrue(is_localhost("127.0.0.1"))
+        self.assertTrue(is_localhost("::1"))
+        self.assertTrue(is_localhost("localhost"))
+        self.assertFalse(is_localhost("192.168.1.50"))
+        self.assertFalse(is_localhost("10.0.0.1"))
+
+    def test_require_localhost_decorator(self):
+        app = Flask(__name__)
+
+        @app.route("/secret-endpoint")
+        @require_localhost
+        def secret_view():
+            return jsonify({"status": "ok"})
+
+        client = app.test_client()
+
+        # Localhost allowed
+        res_local = client.get(
+            "/secret-endpoint", environ_base={"REMOTE_ADDR": "127.0.0.1"}
+        )
+        self.assertEqual(res_local.status_code, 200)
+
+        # Remote forbidden
+        res_remote = client.get(
+            "/secret-endpoint", environ_base={"REMOTE_ADDR": "192.168.1.100"}
+        )
+        self.assertEqual(res_remote.status_code, 403)
+        self.assertIn("Brak uprawnień", res_remote.get_json()["error"])
+
     @patch("socket.socket")
     def test_get_local_ip_success(self, mock_socket_cls):
         mock_sock = MagicMock()
@@ -30,9 +68,10 @@ class TestSecurity(unittest.TestCase):
     @patch("os.path.exists", return_value=True)
     @patch("builtins.open")
     def test_get_or_create_secret_existing(self, mock_open, mock_exists):
-        with patch("json.load", return_value={"secret": "existing_secret_123"}):
+        valid_64_char_hex = "a" * 64
+        with patch("json.load", return_value={"secret": valid_64_char_hex}):
             secret = get_or_create_secret()
-            self.assertEqual(secret, "existing_secret_123")
+            self.assertEqual(secret, valid_64_char_hex)
 
     @patch("os.path.exists", return_value=False)
     @patch("builtins.open")
@@ -40,6 +79,13 @@ class TestSecurity(unittest.TestCase):
         with patch("json.dump") as mock_dump:
             secret = get_or_create_secret()
             self.assertEqual(len(secret), 64)
+            mock_dump.assert_called_once()
+
+    @patch("builtins.open")
+    def test_rotate_secret(self, mock_open):
+        with patch("json.dump") as mock_dump:
+            new_sec = rotate_secret()
+            self.assertEqual(len(new_sec), 64)
             mock_dump.assert_called_once()
 
     @patch("modules.security.get_or_create_secret", return_value="my_test_secret")
@@ -88,6 +134,38 @@ class TestSecurity(unittest.TestCase):
             "timestamp": expired_ts,
             "signature": "any_signature",
         }
+        self.assertFalse(verify_socket_payload(payload, "action"))
+
+    @patch("modules.security.get_or_create_secret", return_value="my_test_secret")
+    def test_verify_socket_payload_future_timestamp(self, mock_secret):
+        future_ts = str(time.time() + 50)  # 50 seconds in future
+        payload = {
+            "command": "hotkey",
+            "args": "ctrl+c",
+            "timestamp": future_ts,
+            "signature": "any_signature",
+        }
+        self.assertFalse(verify_socket_payload(payload, "action"))
+
+    @patch("modules.security.get_or_create_secret", return_value="my_test_secret")
+    def test_verify_socket_payload_replay_attack_rejected(self, mock_secret):
+        now = str(time.time())
+        raw_string = f"hotkeyctrl+c{now}"
+        signature = hmac.new(
+            b"my_test_secret", raw_string.encode("utf-8"), hashlib.sha256
+        ).hexdigest()
+
+        payload = {
+            "command": "hotkey",
+            "args": "ctrl+c",
+            "timestamp": now,
+            "signature": signature,
+        }
+
+        # First time succeeds
+        self.assertTrue(verify_socket_payload(payload, "action"))
+
+        # Second time with the exact same signature (replayed packet) must be rejected!
         self.assertFalse(verify_socket_payload(payload, "action"))
 
     @patch("modules.security.get_or_create_secret", return_value="my_test_secret")

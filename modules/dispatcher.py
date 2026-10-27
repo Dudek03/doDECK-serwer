@@ -7,7 +7,14 @@ import pygetwindow as gw
 import time
 import psutil
 import ctypes
-from modules.security import get_or_create_secret, get_local_ip, verify_socket_payload
+import hmac
+from modules.security import (
+    get_or_create_secret,
+    get_local_ip,
+    verify_socket_payload,
+    require_localhost,
+    is_localhost,
+)
 
 dispatcher_bp = Blueprint("dispatcher", __name__)
 CONFIG_FILE = "buttons_config.json"
@@ -129,10 +136,17 @@ def execute_command(command, args):
             return True, f"Wpisano tekst: {args}"
 
         elif command == "open_url":
-            webbrowser.open(args)
-            return True, f"Otwarto stronę: {args}"
+            if isinstance(args, str) and (
+                args.startswith("http://") or args.startswith("https://")
+            ):
+                webbrowser.open(args)
+                return True, f"Otwarto stronę: {args}"
+            return False, "Niepoprawny URL (dozwolone tylko http:// lub https://)"
 
         elif command == "workspace":
+            if not isinstance(args, list):
+                return False, "Niepoprawny format workspace (wymagana lista okien)"
+
             for target in args:
                 title = target.get("title", "")
                 exec_path = target.get("exec_path", "")
@@ -159,7 +173,6 @@ def execute_command(command, args):
                         win.resizeTo(target["width"], target["height"])
                         win.activate()
                     except Exception as e:
-                        # Ignorujemy fałszywe błędy Windowsa o kodzie 0
                         if "Error code from Windows: 0" not in str(e):
                             print(f"[WARN] Błąd przesunięcia okna {title}: {e}")
 
@@ -186,9 +199,13 @@ def get_layout():
 
 
 @dispatcher_bp.route("/save_layout", methods=["POST"])
+@require_localhost
 def save_layout():
     try:
-        new_layout = request.get_json()
+        new_layout = request.get_json(silent=True)
+        if not isinstance(new_layout, dict) or "layouts" not in new_layout:
+            return jsonify({"error": "Niepoprawny format danych układu"}), 400
+
         with open(CONFIG_FILE, "w", encoding="utf-8") as f:
             json.dump(new_layout, f, ensure_ascii=False, indent=4)
         return jsonify({"status": "ok", "msg": "Zapisano układ"}), 200
@@ -197,6 +214,7 @@ def save_layout():
 
 
 @dispatcher_bp.route("/scan_windows", methods=["GET"])
+@require_localhost
 def scan_windows():
     windows = []
     for win in gw.getAllWindows():
@@ -227,22 +245,31 @@ def scan_windows():
 
 
 @dispatcher_bp.route("/get_pairing_data", methods=["GET"])
+@require_localhost
 def get_pairing_data():
     """Udostępnia dane do kodu QR. Zablokowane tylko dla localhosta!"""
-    # 127.0.0.1 (lub ::1) oznacza, że nikt w kawiarni nie wyciągnie klucza przez wpisanie Twojego IP w przeglądarkę
-    if request.remote_addr not in ['127.0.0.1', '::1']:
-        return jsonify({"error": "Brak uprawnień. Parowanie dostępne tylko lokalnie na PC."}), 403
-        
     return jsonify({
         "ip": get_local_ip(),
         "port": 5000,
         "secret": get_or_create_secret()
     })
 
+
 @dispatcher_bp.route("/trigger", methods=["POST"])
 def trigger_action_rest():
     """Bramka dla skryptów zewnętrznych i starego Web Edytora"""
-    data = request.get_json()
+    if not is_localhost(request.remote_addr):
+        secret_header = request.headers.get("X-DoDeck-Secret", "")
+        expected_secret = get_or_create_secret()
+        if not secret_header or not hmac.compare_digest(secret_header, expected_secret):
+            return (
+                jsonify(
+                    {"error": "Brak uprawnień. Wymagany localhost lub poprawny nagłówek X-DoDeck-Secret."}
+                ),
+                403,
+            )
+
+    data = request.get_json(silent=True) or {}
     success, msg = execute_command(data.get("command"), data.get("args", ""))
 
     if success:
@@ -255,7 +282,7 @@ def register_dispatcher_events(socketio):
 
     @socketio.on("trigger_action")
     def handle_trigger(data):
-        if not verify_socket_payload(data, 'action'):
+        if not verify_socket_payload(data, "action"):
             return
 
         success, msg = execute_command(
@@ -269,18 +296,18 @@ def register_dispatcher_events(socketio):
 
     @socketio.on("trigger_macro")
     def handle_macro(data):
-        if not verify_socket_payload(data, 'macro'):
+        if not verify_socket_payload(data, "macro"):
             return
 
-        steps = data.get('steps', [])
+        steps = data.get("steps", [])
         print(f"🚀 [WS] Wykonywanie makra ({len(steps)} kroków)...")
-        
+
         for step in steps:
-            command = step.get('command')
-            args = step.get('args', '')
-            delay_ms = step.get('delay', 0)
-            
+            command = step.get("command")
+            args = step.get("args", "")
+            delay_ms = step.get("delay", 0)
+
             execute_command(command, args)
-            
+
             if delay_ms > 0:
                 time.sleep(delay_ms / 1000.0)

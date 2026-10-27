@@ -1,12 +1,11 @@
 from modules.dispatcher import register_dispatcher_events
 from modules.audio import register_audio_events
 from modules.system import register_socket_events
-from modules.security import get_or_create_secret
-from modules.security import get_local_ip
+from modules.security import get_or_create_secret, get_local_ip, require_localhost
 from modules import blueprints
 from flask_socketio import SocketIO
 from flask_cors import CORS
-from flask import Flask, request, jsonify
+from flask import Flask, jsonify
 from PIL import Image, ImageDraw
 import webbrowser
 import os
@@ -40,13 +39,9 @@ def index():
 
 
 @app.route("/api/pairing")
+@require_localhost
 def get_pairing_data():
     """Udostępnia dane do kodu QR. Zablokowane tylko dla localhosta!"""
-    if request.remote_addr not in ["127.0.0.1", "::1"]:
-        return jsonify(
-            {"error": "Brak uprawnień. Parowanie dostępne tylko na PC."}
-        ), 403
-
     return jsonify(
         {"ip": get_local_ip(), "port": 5000, "secret": get_or_create_secret()}
     )

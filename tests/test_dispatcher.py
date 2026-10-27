@@ -36,6 +36,11 @@ class TestDispatcher(unittest.TestCase):
         self.assertTrue(success)
         mock_open.assert_called_with("https://google.com")
 
+    def test_execute_open_url_disallowed_scheme(self):
+        success, msg = execute_command("open_url", "javascript:alert(1)")
+        self.assertFalse(success)
+        self.assertIn("Niepoprawny URL", msg)
+
     @patch("pygetwindow.getWindowsWithTitle")
     @patch("os.startfile")
     @patch("time.sleep")
@@ -164,6 +169,51 @@ class TestDispatcher(unittest.TestCase):
             json={"command": "invalid", "args": ""},
         )
         self.assertEqual(response.status_code, 400)
+
+    def test_save_layout_remote_forbidden(self):
+        response = self.client.post(
+            "/dispatcher/save_layout",
+            json={"layouts": []},
+            environ_base={"REMOTE_ADDR": "192.168.1.100"},
+        )
+        self.assertEqual(response.status_code, 403)
+
+    def test_save_layout_invalid_format(self):
+        response = self.client.post(
+            "/dispatcher/save_layout",
+            json="invalid_not_a_dict",
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_scan_windows_remote_forbidden(self):
+        response = self.client.get(
+            "/dispatcher/scan_windows",
+            environ_base={"REMOTE_ADDR": "192.168.1.100"},
+        )
+        self.assertEqual(response.status_code, 403)
+
+    def test_trigger_action_rest_remote_without_secret_forbidden(self):
+        response = self.client.post(
+            "/dispatcher/trigger",
+            json={"command": "hotkey", "args": "win+d"},
+            environ_base={"REMOTE_ADDR": "192.168.1.100"},
+        )
+        self.assertEqual(response.status_code, 403)
+
+    @patch("modules.dispatcher.get_or_create_secret", return_value="super_secret_key")
+    @patch("modules.dispatcher.execute_command")
+    def test_trigger_action_rest_remote_with_valid_secret(
+        self, mock_exec, mock_secret
+    ):
+        mock_exec.return_value = (True, "Executed via secret")
+        response = self.client.post(
+            "/dispatcher/trigger",
+            json={"command": "hotkey", "args": "win+d"},
+            headers={"X-DoDeck-Secret": "super_secret_key"},
+            environ_base={"REMOTE_ADDR": "192.168.1.100"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["status"], "ok")
 
 
 class TestDispatcherSocketEvents(unittest.TestCase):

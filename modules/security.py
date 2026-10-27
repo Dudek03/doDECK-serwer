@@ -5,8 +5,29 @@ import hmac
 import hashlib
 import time
 import socket
+from functools import wraps
+from flask import request, jsonify
 
 TOKEN_FILE = "trusted_devices.json"
+SEEN_SIGNATURES = {}  # signature: expiration_time
+
+
+def is_localhost(remote_addr):
+    """Sprawdza, czy zapytanie pochodzi z lokalnej maszyny hosta."""
+    return remote_addr in ("127.0.0.1", "::1", "localhost")
+
+
+def require_localhost(f):
+    """Dekorator blokujący dostęp do wrażliwych endpointów dla urządzeń spoza localhosta."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not is_localhost(request.remote_addr):
+            return jsonify(
+                {"error": "Brak uprawnień. Dostęp dozwolony tylko z lokalnej maszyny (PC)."}
+            ), 403
+        return f(*args, **kwargs)
+
+    return decorated_function
 
 
 def get_local_ip():
@@ -22,16 +43,45 @@ def get_local_ip():
 
 
 def get_or_create_secret():
-    """Pobiera istniejący klucz lub generuje nowy, 64-znakowy i zapisuje do pliku."""
+    """Pobiera istniejący klucz lub generuje nowy, 64-znakowy i bezpiecznie zapisuje do pliku."""
     if os.path.exists(TOKEN_FILE):
-        with open(TOKEN_FILE, "r") as f:
-            data = json.load(f)
-            return data.get("secret")
+        try:
+            with open(TOKEN_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                sec = data.get("secret")
+                if sec and isinstance(sec, str) and len(sec) == 64:
+                    return sec
+        except Exception:
+            pass
 
     new_secret = secrets.token_hex(32)
-    with open(TOKEN_FILE, "w") as f:
+    try:
+        with open(TOKEN_FILE, "w", encoding="utf-8") as f:
+            json.dump({"secret": new_secret}, f)
+    except Exception as e:
+        print(f"⚠️ [Security] Błąd zapisu klucza do pliku: {e}")
+    return new_secret
+
+
+def rotate_secret():
+    """Generuje nowy klucz, unieważniając dotychczas sparowane urządzenia."""
+    new_secret = secrets.token_hex(32)
+    with open(TOKEN_FILE, "w", encoding="utf-8") as f:
         json.dump({"secret": new_secret}, f)
     return new_secret
+
+
+def _is_signature_replayed(signature, current_time):
+    """Wykrywa ponowne użycie tego samego podpisu w oknie czasowym (ochrona przed replay attack)."""
+    expired = [sig for sig, exp in SEEN_SIGNATURES.items() if exp < current_time]
+    for sig in expired:
+        del SEEN_SIGNATURES[sig]
+
+    if signature in SEEN_SIGNATURES:
+        return True
+
+    SEEN_SIGNATURES[signature] = current_time + 15
+    return False
 
 
 def verify_socket_payload(data_dict, action_type):
@@ -50,14 +100,19 @@ def verify_socket_payload(data_dict, action_type):
         print("🔒 [Zabezpieczenia] Odrzucono: Brak podpisu lub czasu.")
         return False
 
-    # Sprawdzenie Replay Attack (odrzucamy zapytania starsze niż 10 sekund)
+    current_time = time.time()
     try:
-        if time.time() - float(timestamp) > 10:
-            print(
-                "🔒 [Zabezpieczenia] Odrzucono: Zbyt stare zapytanie (Replay Attack)."
-            )
+        ts = float(timestamp)
+        # Odrzucamy zapytania starsze niż 10s lub wyprzedzające zegar o więcej niż 10s
+        if abs(current_time - ts) > 10:
+            print("🔒 [Zabezpieczenia] Odrzucono: Zbyt stare lub przyszłe zapytanie (Replay/Skew).")
             return False
-    except ValueError:
+    except (ValueError, TypeError):
+        return False
+
+    # Sprawdzenie pamięci unikalnych podpisów (odrzucenie powtórzonego pakietu w oknie 10s)
+    if _is_signature_replayed(signature, current_time):
+        print("🔒 [Zabezpieczenia] Odrzucono: Wykryto powtórzone zapytanie (Replay Attack).")
         return False
 
     if action_type == "action":
@@ -75,9 +130,12 @@ def verify_socket_payload(data_dict, action_type):
     else:
         return False
 
-    secret = get_or_create_secret().encode("utf-8")
+    secret = get_or_create_secret()
+    if not secret:
+        return False
+
     expected_signature = hmac.new(
-        secret, raw_string.encode("utf-8"), hashlib.sha256
+        secret.encode("utf-8"), raw_string.encode("utf-8"), hashlib.sha256
     ).hexdigest()
 
     if hmac.compare_digest(signature, expected_signature):
