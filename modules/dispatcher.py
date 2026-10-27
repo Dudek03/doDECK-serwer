@@ -1,5 +1,4 @@
 from flask import Blueprint, jsonify, request
-from modules.security import verify_socket_payload
 import keyboard
 import os
 import webbrowser
@@ -127,6 +126,7 @@ def execute_command(command, args):
 
         elif command == "write":
             keyboard.write(args, exact=True)
+            return True, f"Wpisano tekst: {args}"
 
         elif command == "open_url":
             webbrowser.open(args)

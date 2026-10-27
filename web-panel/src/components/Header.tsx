@@ -1,5 +1,7 @@
+import type { FullLayoutConfig, LayoutData } from '../types';
+
 interface HeaderProps {
-    layoutData: any;
+    layoutData: FullLayoutConfig | null;
     isEditMode: boolean;
     profileStack: string[];
     onSwitchProfile: (id: string) => void;
@@ -12,7 +14,19 @@ interface HeaderProps {
     onOpenPairing: () => void;
 }
 
-export default function Header({ layoutData, isEditMode, profileStack, onSwitchProfile, onAddProfile, onDeleteProfile, onToggleEdit, onAddTile, onSave, onGoBack, onOpenPairing }: HeaderProps) {
+export default function Header({
+    layoutData,
+    isEditMode,
+    profileStack,
+    onSwitchProfile,
+    onAddProfile,
+    onDeleteProfile,
+    onToggleEdit,
+    onAddTile,
+    onSave,
+    onGoBack,
+    onOpenPairing,
+}: HeaderProps) {
     if (!layoutData) return null;
 
     return (
@@ -26,21 +40,42 @@ export default function Header({ layoutData, isEditMode, profileStack, onSwitchP
                     </button>
                 )}
 
-                <select className="header-select" value={layoutData.active_layout_id} onChange={(e) => onSwitchProfile(e.target.value)}>
-                    {layoutData.layouts.map((l: any) => (
-                        <option key={l.id} value={l.id}>{l.name}</option>
+                <select
+                    className="header-select"
+                    value={layoutData.active_layout_id}
+                    onChange={(e) => onSwitchProfile(e.target.value)}
+                >
+                    {layoutData.layouts.map((l: LayoutData) => (
+                        <option key={l.id} value={l.id}>
+                            {l.name}
+                        </option>
                     ))}
                 </select>
-                <button className="btn btn-dark" onClick={onAddProfile}>+ Profil</button>
-                <button className="btn btn-red" onClick={onDeleteProfile} title="Usuń obecny profil">- Usuń</button>
+                <button className="btn btn-dark" onClick={onAddProfile}>
+                    + Profil
+                </button>
+                <button className="btn btn-red" onClick={onDeleteProfile} title="Usuń obecny profil">
+                    - Usuń
+                </button>
             </div>
 
             <div className="header-right">
-                {isEditMode && <button className="btn btn-blue" onClick={onAddTile}>+ Kafelek</button>}
-                <button className={`btn ${isEditMode ? 'btn-red' : 'btn-gray'}`} onClick={onToggleEdit}>
+                {isEditMode && (
+                    <button className="btn btn-blue" onClick={onAddTile}>
+                        + Kafelek
+                    </button>
+                )}
+                <button
+                    className={`btn ${isEditMode ? 'btn-red' : 'btn-gray'}`}
+                    onClick={onToggleEdit}
+                >
                     {isEditMode ? 'Wyłącz Edycję' : 'Tryb Edycji'}
                 </button>
-                {isEditMode && <button className="btn btn-green" onClick={onSave}>Zapisz układ</button>}
+                {isEditMode && (
+                    <button className="btn btn-green" onClick={onSave}>
+                        Zapisz układ
+                    </button>
+                )}
                 <button className="btn btn-dark" onClick={onOpenPairing} style={{ marginRight: 15 }}>
                     Paruj
                 </button>

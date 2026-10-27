@@ -1,9 +1,9 @@
-import type { TileButton } from '../types';
+import type { TileButton, SystemData } from '../types';
 
 interface TileProps {
     btn: TileButton;
     isEditMode: boolean;
-    systemData: { cpu: string; ram: string };
+    systemData: SystemData;
     onEdit: (btn: TileButton) => void;
     onClick: (btn: TileButton) => void;
 }
@@ -24,14 +24,21 @@ export default function Tile({ btn, isEditMode, systemData, onEdit, onClick }: T
             }}
         >
             {isEditMode && (
-                <div className="tile-edit-btn" onPointerDown={(e) => { e.stopPropagation(); onEdit(btn); }}>
+                <div
+                    className="tile-edit-btn"
+                    onPointerDown={(e) => {
+                        e.stopPropagation();
+                        onEdit(btn);
+                    }}
+                >
                     ⚙
                 </div>
             )}
 
             {btn.type === 'LIVE DATA' ? (
                 <>
-                    {btn.title}<br />
+                    {btn.title}
+                    <br />
                     <span className="tile-data-val">
                         {btn.payload.sensor === 'ram' ? `${systemData.ram}%` : `${systemData.cpu}%`}
                     </span>
