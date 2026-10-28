@@ -57,7 +57,7 @@
                     "type": "ACTION",
                     "w": 1,
                     "x": 1,
-                    "y": 2
+                    "y": 3
                 },
                 {
                     "color": "#2ecc71",
@@ -70,7 +70,7 @@
                     "type": "WIDGET",
                     "w": 1,
                     "x": 1,
-                    "y": 3
+                    "y": 4
                 },
                 {
                     "color": "#5865F2",
@@ -198,6 +198,20 @@
                     "w": 1,
                     "x": 1,
                     "y": 1
+                },
+                {
+                    "id": "1793104591903",
+                    "title": "pisanko",
+                    "color": "#cd9c13",
+                    "type": "ACTION",
+                    "x": 1,
+                    "y": 2,
+                    "w": 1,
+                    "h": 1,
+                    "payload": {
+                        "command": "write",
+                        "args": "siemka"
+                    }
                 }
             ],
             "grid": {
@@ -208,37 +222,25 @@
             "name": "Główny Panel"
         },
         {
-            "id": "profile_1793018286954",
-            "name": "folder",
-            "grid": {
-                "columns": 4,
-                "rows": 4
-            },
             "buttons": [
                 {
-                    "id": "1793018329067",
-                    "title": "widget",
                     "color": "#8e44ad",
-                    "type": "WIDGET",
-                    "x": 1,
-                    "y": 1,
-                    "w": 2,
                     "h": 2,
+                    "id": "1793018329067",
                     "payload": {
                         "command": "open_mixer"
-                    }
+                    },
+                    "title": "widget",
+                    "type": "WIDGET",
+                    "w": 2,
+                    "x": 1,
+                    "y": 1
                 },
                 {
-                    "id": "1793018384918",
-                    "title": "workspace",
                     "color": "#43ad58",
-                    "type": "WORKSPACE",
-                    "x": 3,
-                    "y": 1,
-                    "w": 1,
                     "h": 1,
+                    "id": "1793018384918",
                     "payload": {
-                        "command": "workspace",
                         "args": [
                             {
                                 "exec_path": "C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe",
@@ -264,23 +266,35 @@
                                 "x": 231,
                                 "y": 213
                             }
-                        ]
-                    }
+                        ],
+                        "command": "workspace"
+                    },
+                    "title": "workspace",
+                    "type": "WORKSPACE",
+                    "w": 1,
+                    "x": 3,
+                    "y": 1
                 },
                 {
-                    "id": "1793018508262",
-                    "title": "NOWY FOLDER",
                     "color": "#4366ad",
-                    "type": "FOLDER",
-                    "x": 3,
-                    "y": 2,
-                    "w": 1,
                     "h": 1,
+                    "id": "1793018508262",
                     "payload": {
                         "args": ""
-                    }
+                    },
+                    "title": "NOWY FOLDER",
+                    "type": "FOLDER",
+                    "w": 1,
+                    "x": 3,
+                    "y": 2
                 }
-            ]
+            ],
+            "grid": {
+                "columns": 4,
+                "rows": 4
+            },
+            "id": "profile_1793018286954",
+            "name": "folder"
         }
     ]
 }
