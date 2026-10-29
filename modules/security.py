@@ -14,7 +14,12 @@ SEEN_SIGNATURES = {}  # signature: expiration_time
 
 def is_localhost(remote_addr):
     """Sprawdza, czy zapytanie pochodzi z lokalnej maszyny hosta."""
-    return remote_addr in ("127.0.0.1", "::1", "localhost")
+    if not remote_addr:
+        return False
+    return (
+        remote_addr in ("127.0.0.1", "::1", "localhost", "::ffff:127.0.0.1")
+        or remote_addr.endswith("127.0.0.1")
+    )
 
 
 def require_localhost(f):

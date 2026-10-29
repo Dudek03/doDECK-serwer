@@ -33,6 +33,11 @@ export default function App() {
     const [isPairingOpen, setIsPairingOpen] = useState(false);
 
     const [isClientMode, setIsClientMode] = useState<boolean>(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('secret')) return true;
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            return false;
+        }
         return localStorage.getItem('dodeck_client_mode') === 'true';
     });
 
@@ -87,20 +92,22 @@ export default function App() {
             window.history.replaceState(null, '', window.location.pathname);
         }
 
-        if (!secretKey) {
-            axios
-                .get<PairingData>('/dispatcher/get_pairing_data')
-                .then((res) => {
-                    if (res.data && res.data.secret) {
-                        setSecretKey(res.data.secret);
-                        localStorage.setItem('dodeck_secret', res.data.secret);
-                    }
-                })
-                .catch(() =>
-                    console.log('Brak uprawnień. Zeskanuj kod QR z PC, aby autoryzować.')
-                );
-        }
-    }, [secretKey]);
+        // Zawsze próbujemy pobrać aktualny klucz z serwera (na localhost PC synchronizuje klucz automatycznie)
+        axios
+            .get<PairingData>('/dispatcher/get_pairing_data')
+            .then((res) => {
+                if (res.data && res.data.secret) {
+                    setSecretKey(res.data.secret);
+                    localStorage.setItem('dodeck_secret', res.data.secret);
+                }
+            })
+            .catch(() => {
+                // Poza localhostem (np. w przeglądarce mobilnej) zachowujemy klucz zapisany w localStorage/URL
+                if (!secretKey) {
+                    console.log('Brak uprawnień do pobrania klucza parowania. Używanie zapisanego klucza.');
+                }
+            });
+    }, []);
 
     const switchProfile = (profileId: string) => {
         if (!fullLayoutData) return;
@@ -305,7 +312,7 @@ export default function App() {
                                     y: 1,
                                     w: 1,
                                     h: 1,
-                                    payload: { args: '' },
+                                    payload: { args: fullLayoutData.layouts[0]?.id || 'default' },
                                 },
                             ])
                         }
@@ -337,25 +344,84 @@ export default function App() {
                 </>
             )}
 
-            {isClientMode && profileStack.length > 0 && (
-                <button
-                    onClick={handleGoBack}
+            {isClientMode && (
+                <div
                     style={{
-                        margin: '10px',
-                        padding: '15px',
-                        backgroundColor: '#3498db',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '10px',
-                        fontWeight: 'bold',
-                        fontSize: '18px',
-                        cursor: 'pointer',
-                        display: 'block',
-                        width: 'calc(100% - 20px)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '10px 15px',
+                        backgroundColor: '#1f242d',
+                        borderBottom: '1px solid #333',
+                        gap: '10px',
                     }}
                 >
-                    ⬅ Wstecz
-                </button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        {profileStack.length > 0 && (
+                            <button
+                                onClick={handleGoBack}
+                                style={{
+                                    padding: '8px 14px',
+                                    backgroundColor: '#3498db',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    fontWeight: 'bold',
+                                    fontSize: '14px',
+                                    cursor: 'pointer',
+                                }}
+                            >
+                                ⬅ Wstecz
+                            </button>
+                        )}
+                        <span style={{ color: '#aaa', fontSize: '14px', fontWeight: 'bold' }}>
+                            Profil:
+                        </span>
+                        <select
+                            value={fullLayoutData.active_layout_id}
+                            onChange={(e) => {
+                                setProfileStack([]);
+                                switchProfile(e.target.value);
+                            }}
+                            style={{
+                                padding: '6px 12px',
+                                backgroundColor: '#2b313d',
+                                color: '#fff',
+                                border: '1px solid #444',
+                                borderRadius: '6px',
+                                fontSize: '14px',
+                                cursor: 'pointer',
+                            }}
+                        >
+                            {fullLayoutData.layouts.map((l) => (
+                                <option key={l.id} value={l.id}>
+                                    {l.name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <button
+                        onClick={() => {
+                            if (window.confirm('Czy chcesz przejść do trybu edytora PC?')) {
+                                localStorage.removeItem('dodeck_client_mode');
+                                setIsClientMode(false);
+                            }
+                        }}
+                        style={{
+                            padding: '6px 10px',
+                            backgroundColor: 'transparent',
+                            color: '#888',
+                            border: '1px solid #444',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            cursor: 'pointer',
+                        }}
+                        title="Tryb edytora"
+                    >
+                        ⚙️ Edytor
+                    </button>
+                </div>
             )}
 
             <DevicePreview

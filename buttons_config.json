@@ -1,5 +1,5 @@
 {
-    "active_layout_id": "profile_1793018286954",
+    "active_layout_id": "default",
     "layouts": [
         {
             "buttons": [
@@ -280,9 +280,9 @@
                     "h": 1,
                     "id": "1793018508262",
                     "payload": {
-                        "args": ""
+                        "args": "default"
                     },
-                    "title": "NOWY FOLDER",
+                    "title": "Główny panel",
                     "type": "FOLDER",
                     "w": 1,
                     "x": 3,

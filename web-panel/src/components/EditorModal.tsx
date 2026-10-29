@@ -11,7 +11,13 @@ interface EditorModalProps {
 }
 
 export default function EditorModal({ tile, profiles, onSave, onCancel, onDelete }: EditorModalProps) {
-    const [editingTile, setEditingTile] = useState<TileButton>({ ...tile });
+    const [editingTile, setEditingTile] = useState<TileButton>(() => {
+        const initial = { ...tile };
+        if (initial.type === 'FOLDER' && (!initial.payload?.args || typeof initial.payload.args !== 'string')) {
+            initial.payload = { ...initial.payload, args: profiles[0]?.id || '' };
+        }
+        return initial;
+    });
     const [scannedWindows, setScannedWindows] = useState<WindowTarget[]>([]);
 
     const updatePayload = <K extends keyof ButtonPayload>(key: K, value: ButtonPayload[K]) => {
@@ -19,6 +25,17 @@ export default function EditorModal({ tile, profiles, onSave, onCancel, onDelete
             ...prev,
             payload: { ...prev.payload, [key]: value },
         }));
+    };
+
+    const handleSave = () => {
+        const finalTile = { ...editingTile };
+        if (finalTile.type === 'FOLDER') {
+            const currentArg = typeof finalTile.payload?.args === 'string' ? finalTile.payload.args : '';
+            if (!currentArg && profiles.length > 0) {
+                finalTile.payload = { ...finalTile.payload, args: profiles[0].id };
+            }
+        }
+        onSave(finalTile);
     };
 
     const handleScanWindows = async () => {
@@ -98,7 +115,11 @@ export default function EditorModal({ tile, profiles, onSave, onCancel, onDelete
                         <label className="modal-label">Wybierz profil docelowy:</label>
                         <select
                             className="modal-input"
-                            value={typeof editingTile.payload.args === 'string' ? editingTile.payload.args : ''}
+                            value={
+                                typeof editingTile.payload?.args === 'string' && editingTile.payload.args
+                                    ? editingTile.payload.args
+                                    : profiles[0]?.id || ''
+                            }
                             onChange={(e) => updatePayload('args', e.target.value)}
                         >
                             {profiles.map((p) => (
@@ -182,7 +203,7 @@ export default function EditorModal({ tile, profiles, onSave, onCancel, onDelete
                 )}
 
                 <div style={{ display: 'flex', gap: 10, marginTop: 15 }}>
-                    <button className="btn btn-green" style={{ flex: 1 }} onClick={() => onSave(editingTile)}>
+                    <button className="btn btn-green" style={{ flex: 1 }} onClick={handleSave}>
                         Zapisz
                     </button>
                     <button className="btn btn-dark" style={{ flex: 1 }} onClick={onCancel}>
