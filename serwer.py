@@ -23,7 +23,7 @@ else:
 static_dir = os.path.join(BASE_DIR, "web-panel", "dist")
 app = Flask(__name__, static_folder=static_dir, static_url_path="/")
 CORS(app)
-socketio = SocketIO(app, cors_allowed_origins="*")
+socketio = SocketIO(app, async_mode="gevent", cors_allowed_origins="*")
 for bp in blueprints:
     app.register_blueprint(bp, url_prefix=f"/{bp.name}")
 

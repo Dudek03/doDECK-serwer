@@ -1,5 +1,5 @@
 {
-    "active_layout_id": "default",
+    "active_layout_id": "profile_1793018286954",
     "layouts": [
         {
             "buttons": [
@@ -114,60 +114,14 @@
                     "y": 3
                 },
                 {
-                    "color": "#2623e7",
+                    "color": "#985ddf",
                     "h": 1,
                     "id": "1791203798186",
                     "payload": {
-                        "args": [
-                            {
-                                "height": 840,
-                                "title": "web-panel – Brave",
-                                "width": 781,
-                                "x": -6,
-                                "y": 0
-                            },
-                            {
-                                "height": 423,
-                                "title": "Windows PowerShell",
-                                "width": 781,
-                                "x": 762,
-                                "y": 0
-                            },
-                            {
-                                "height": 514,
-                                "title": "Znajomi - Discord",
-                                "width": 827,
-                                "x": 715,
-                                "y": 326
-                            },
-                            {
-                                "height": 613,
-                                "title": "Spotify",
-                                "width": 813,
-                                "x": 723,
-                                "y": 221
-                            },
-                            {
-                                "exec_path": "C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe",
-                                "height": 431,
-                                "title": "PBacktEnd-Lab10 – Brave",
-                                "width": 782,
-                                "x": 761,
-                                "y": 410
-                            },
-                            {
-                                "exec_path": "C:\\Program Files\\Mozilla Firefox\\firefox.exe",
-                                "height": 704,
-                                "title": "Mozilla Firefox",
-                                "width": 655,
-                                "x": 759,
-                                "y": 0
-                            }
-                        ],
-                        "command": "workspace"
+                        "args": "profile_1793310426088"
                     },
-                    "title": "test",
-                    "type": "WORKSPACE",
+                    "title": "do melcio",
+                    "type": "FOLDER",
                     "w": 1,
                     "x": 2,
                     "y": 3
@@ -200,18 +154,18 @@
                     "y": 1
                 },
                 {
-                    "id": "1793104591903",
-                    "title": "pisanko",
                     "color": "#cd9c13",
-                    "type": "ACTION",
-                    "x": 1,
-                    "y": 2,
-                    "w": 1,
                     "h": 1,
+                    "id": "1793104591903",
                     "payload": {
-                        "command": "write",
-                        "args": "siemka"
-                    }
+                        "args": "siemka",
+                        "command": "write"
+                    },
+                    "title": "pisanko",
+                    "type": "ACTION",
+                    "w": 1,
+                    "x": 1,
+                    "y": 2
                 }
             ],
             "grid": {
@@ -273,7 +227,7 @@
                     "type": "WORKSPACE",
                     "w": 1,
                     "x": 3,
-                    "y": 1
+                    "y": 2
                 },
                 {
                     "color": "#4366ad",
@@ -286,7 +240,20 @@
                     "type": "FOLDER",
                     "w": 1,
                     "x": 3,
-                    "y": 2
+                    "y": 1
+                },
+                {
+                    "id": "1793310534422",
+                    "title": "melcio",
+                    "color": "#ee2bb0",
+                    "type": "FOLDER",
+                    "x": 4,
+                    "y": 1,
+                    "w": 1,
+                    "h": 1,
+                    "payload": {
+                        "args": "profile_1793310426088"
+                    }
                 }
             ],
             "grid": {
@@ -295,6 +262,68 @@
             },
             "id": "profile_1793018286954",
             "name": "folder"
+        },
+        {
+            "id": "profile_1793310426088",
+            "name": "melcio",
+            "grid": {
+                "columns": 16,
+                "rows": 8
+            },
+            "buttons": [
+                {
+                    "id": "1793310438829",
+                    "title": "NOWY FOLDER",
+                    "color": "#8e44ad",
+                    "type": "FOLDER",
+                    "x": 1,
+                    "y": 1,
+                    "w": 10,
+                    "h": 5,
+                    "payload": {
+                        "args": "default"
+                    }
+                },
+                {
+                    "id": "1793310441514",
+                    "title": "NOWY FOLDER",
+                    "color": "#8e44ad",
+                    "type": "FOLDER",
+                    "x": 11,
+                    "y": 1,
+                    "w": 1,
+                    "h": 1,
+                    "payload": {
+                        "args": "default"
+                    }
+                },
+                {
+                    "id": "1793310443749",
+                    "title": "NOWY FOLDER",
+                    "color": "#8e44ad",
+                    "type": "FOLDER",
+                    "x": 12,
+                    "y": 1,
+                    "w": 1,
+                    "h": 1,
+                    "payload": {
+                        "args": "default"
+                    }
+                },
+                {
+                    "id": "1793310445902",
+                    "title": "NOWY FOLDER",
+                    "color": "#8e44ad",
+                    "type": "FOLDER",
+                    "x": 11,
+                    "y": 2,
+                    "w": 2,
+                    "h": 2,
+                    "payload": {
+                        "args": "default"
+                    }
+                }
+            ]
         }
     ]
 }
