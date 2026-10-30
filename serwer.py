@@ -1,3 +1,8 @@
+from modules.paths import set_safe_working_directory
+
+# Zabezpieczenie przed startem z katalogu C:\Windows\System32
+set_safe_working_directory()
+
 from modules.dispatcher import register_dispatcher_events
 from modules.audio import register_audio_events
 from modules.system import register_socket_events

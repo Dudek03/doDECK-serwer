@@ -102,6 +102,22 @@ class TestDispatcher(unittest.TestCase):
         self.assertIn("active_layout_id", data)
         self.assertIn("layouts", data)
 
+    @patch("os.path.exists", return_value=False)
+    @patch("builtins.open", side_effect=PermissionError("Access denied"))
+    def test_get_layout_write_permission_error_returns_200(self, mock_open, mock_exists):
+        response = self.client.get("/dispatcher/get_layout")
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertIn("active_layout_id", data)
+
+    @patch("os.path.exists", return_value=True)
+    @patch("builtins.open", side_effect=PermissionError("Access denied"))
+    def test_get_layout_read_error_returns_200(self, mock_open, mock_exists):
+        response = self.client.get("/dispatcher/get_layout")
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertIn("active_layout_id", data)
+
     @patch("builtins.open")
     def test_save_layout_success(self, mock_open):
         new_layout = {"active_layout_id": "custom", "layouts": []}

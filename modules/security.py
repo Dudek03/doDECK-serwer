@@ -7,8 +7,9 @@ import time
 import socket
 from functools import wraps
 from flask import request, jsonify
+from modules.paths import get_config_path
 
-TOKEN_FILE = "trusted_devices.json"
+TOKEN_FILE = get_config_path("trusted_devices.json")
 SEEN_SIGNATURES = {}  # signature: expiration_time
 
 
@@ -49,9 +50,10 @@ def get_local_ip():
 
 def get_or_create_secret():
     """Pobiera istniejący klucz lub generuje nowy, 64-znakowy i bezpiecznie zapisuje do pliku."""
-    if os.path.exists(TOKEN_FILE):
+    token_file = get_config_path("trusted_devices.json")
+    if os.path.exists(token_file):
         try:
-            with open(TOKEN_FILE, "r", encoding="utf-8") as f:
+            with open(token_file, "r", encoding="utf-8-sig") as f:
                 data = json.load(f)
                 sec = data.get("secret")
                 if sec and isinstance(sec, str) and len(sec) == 64:
@@ -61,18 +63,24 @@ def get_or_create_secret():
 
     new_secret = secrets.token_hex(32)
     try:
-        with open(TOKEN_FILE, "w", encoding="utf-8") as f:
-            json.dump({"secret": new_secret}, f)
+        os.makedirs(os.path.dirname(token_file), exist_ok=True)
+        with open(token_file, "w", encoding="utf-8") as f:
+            json.dump({"secret": new_secret}, f, indent=4)
     except Exception as e:
-        print(f"⚠️ [Security] Błąd zapisu klucza do pliku: {e}")
+        print(f"[WARN] [Security] Błąd zapisu klucza do pliku: {e}")
     return new_secret
 
 
 def rotate_secret():
     """Generuje nowy klucz, unieważniając dotychczas sparowane urządzenia."""
+    token_file = get_config_path("trusted_devices.json")
     new_secret = secrets.token_hex(32)
-    with open(TOKEN_FILE, "w", encoding="utf-8") as f:
-        json.dump({"secret": new_secret}, f)
+    try:
+        os.makedirs(os.path.dirname(token_file), exist_ok=True)
+        with open(token_file, "w", encoding="utf-8") as f:
+            json.dump({"secret": new_secret}, f, indent=4)
+    except Exception as e:
+        print(f"[WARN] [Security] Błąd zapisu nowego klucza: {e}")
     return new_secret
 
 
@@ -102,7 +110,7 @@ def verify_socket_payload(data_dict, action_type):
     timestamp = data_dict.get("timestamp")
 
     if not signature or not timestamp:
-        print("🔒 [Zabezpieczenia] Odrzucono: Brak podpisu lub czasu.")
+        print("[Security] Odrzucono: Brak podpisu lub czasu.")
         return False
 
     current_time = time.time()
@@ -110,14 +118,14 @@ def verify_socket_payload(data_dict, action_type):
         ts = float(timestamp)
         # Odrzucamy zapytania starsze niż 10s lub wyprzedzające zegar o więcej niż 10s
         if abs(current_time - ts) > 10:
-            print("🔒 [Zabezpieczenia] Odrzucono: Zbyt stare lub przyszłe zapytanie (Replay/Skew).")
+            print("[Security] Odrzucono: Zbyt stare lub przyszłe zapytanie (Replay/Skew).")
             return False
     except (ValueError, TypeError):
         return False
 
     # Sprawdzenie pamięci unikalnych podpisów (odrzucenie powtórzonego pakietu w oknie 10s)
     if _is_signature_replayed(signature, current_time):
-        print("🔒 [Zabezpieczenia] Odrzucono: Wykryto powtórzone zapytanie (Replay Attack).")
+        print("[Security] Odrzucono: Wykryto powtórzone zapytanie (Replay Attack).")
         return False
 
     if action_type == "action":
@@ -146,5 +154,5 @@ def verify_socket_payload(data_dict, action_type):
     if hmac.compare_digest(signature, expected_signature):
         return True
     else:
-        print("🔒 [Zabezpieczenia] Odrzucono: Błędny podpis HMAC.")
+        print("[Security] Odrzucono: Błędny podpis HMAC.")
         return False

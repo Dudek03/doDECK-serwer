@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, request
 import keyboard
 import os
+import sys
 import webbrowser
 import json
 import pygetwindow as gw
@@ -8,6 +9,7 @@ import time
 import psutil
 import ctypes
 import hmac
+from modules.paths import get_config_path
 from modules.security import (
     get_or_create_secret,
     get_local_ip,
@@ -17,7 +19,7 @@ from modules.security import (
 )
 
 dispatcher_bp = Blueprint("dispatcher", __name__)
-CONFIG_FILE = "buttons_config.json"
+CONFIG_FILE = get_config_path("buttons_config.json")
 
 DEFAULT_LAYOUT = {
     "active_layout_id": "profile_main",
@@ -124,6 +126,31 @@ DEFAULT_LAYOUT = {
 }
 
 
+def load_default_layout():
+    """Ładuje domyślny układ z dołączonego pliku buttons_config.json lub zwraca DEFAULT_LAYOUT."""
+    # 1. Sprawdź, czy plik jest spakowany w PyInstaller (sys._MEIPASS)
+    if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+        bundled_path = os.path.join(sys._MEIPASS, "buttons_config.json")
+        if os.path.exists(bundled_path):
+            try:
+                with open(bundled_path, "r", encoding="utf-8-sig") as f:
+                    return json.load(f)
+            except Exception:
+                pass
+
+    # 2. Sprawdź katalog w repozytorium / obok serwera
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    repo_config = os.path.join(base_dir, "buttons_config.json")
+    if os.path.exists(repo_config):
+        try:
+            with open(repo_config, "r", encoding="utf-8-sig") as f:
+                return json.load(f)
+        except Exception:
+            pass
+
+    return DEFAULT_LAYOUT
+
+
 def execute_command(command, args):
     """Główna funkcja wykonawcza. Eliminuje powtarzanie kodu (DRY)."""
     try:
@@ -185,17 +212,24 @@ def execute_command(command, args):
 
 @dispatcher_bp.route("/get_layout", methods=["GET"])
 def get_layout():
+    config_file = get_config_path("buttons_config.json")
     try:
-        if not os.path.exists(CONFIG_FILE):
-            with open(CONFIG_FILE, "w", encoding="utf-8") as f:
-                json.dump(DEFAULT_LAYOUT, f, ensure_ascii=False, indent=4)
-            return jsonify(DEFAULT_LAYOUT), 200
+        if not os.path.exists(config_file):
+            default_data = load_default_layout()
+            try:
+                os.makedirs(os.path.dirname(config_file), exist_ok=True)
+                with open(config_file, "w", encoding="utf-8") as f:
+                    json.dump(default_data, f, ensure_ascii=False, indent=4)
+            except Exception as write_err:
+                print(f"[WARN] Nie udało się zapisać domyślnego pliku konfiguracji: {write_err}")
+            return jsonify(default_data), 200
 
-        with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+        with open(config_file, "r", encoding="utf-8-sig") as f:
             layout = json.load(f)
         return jsonify(layout), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print(f"[WARN] Błąd odczytu layoutu: {e}")
+        return jsonify(DEFAULT_LAYOUT), 200
 
 
 @dispatcher_bp.route("/save_layout", methods=["POST"])
@@ -206,7 +240,9 @@ def save_layout():
         if not isinstance(new_layout, dict) or "layouts" not in new_layout:
             return jsonify({"error": "Niepoprawny format danych układu"}), 400
 
-        with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+        config_file = get_config_path("buttons_config.json")
+        os.makedirs(os.path.dirname(config_file), exist_ok=True)
+        with open(config_file, "w", encoding="utf-8") as f:
             json.dump(new_layout, f, ensure_ascii=False, indent=4)
         return jsonify({"status": "ok", "msg": "Zapisano układ"}), 200
     except Exception as e:
@@ -290,9 +326,9 @@ def register_dispatcher_events(socketio):
             data.get("args", ""),
         )
         if success:
-            print(f"🚀 [WS] {msg}")
+            print(f"[WS] {msg}")
         else:
-            print(f"❌ [WS] Błąd: {msg}")
+            print(f"[WS ERROR] Błąd: {msg}")
 
     @socketio.on("trigger_macro")
     def handle_macro(data):
@@ -300,7 +336,7 @@ def register_dispatcher_events(socketio):
             return
 
         steps = data.get("steps", [])
-        print(f"🚀 [WS] Wykonywanie makra ({len(steps)} kroków)...")
+        print(f"[WS] Wykonywanie makra ({len(steps)} kroków)...")
 
         for step in steps:
             command = step.get("command")

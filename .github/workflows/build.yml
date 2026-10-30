@@ -47,7 +47,7 @@ jobs:
 
       - name: Kompilacja do EXE (PyInstaller)
         run: |
-          pyinstaller --onefile --noconsole --name DoDeckServer --add-data "web-panel/dist;web-panel/dist" --collect-all engineio --collect-all socketio --collect-all gevent --collect-all geventwebsocket --collect-all flask_socketio serwer.py
+          pyinstaller --onefile --noconsole --name DoDeckServer --add-data "web-panel/dist;web-panel/dist" --add-data "buttons_config.json;." --collect-all engineio --collect-all socketio --collect-all gevent --collect-all geventwebsocket --collect-all flask_socketio serwer.py
 
       - name: Udostępnienie pliku EXE
         uses: actions/upload-artifact@v4
