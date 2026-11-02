@@ -123,12 +123,12 @@ export default function PairingModal({ onClose }: PairingModalProps) {
                             }}
                         >
                             {activeTab === 'app' ? (
-                                <QRCodeSVG value={JSON.stringify(pairingData)} size={190} marginSize={2} />
+                                <QRCodeSVG value={JSON.stringify(pairingData)} size={240} marginSize={4} />
                             ) : (
                                 <QRCodeSVG
                                     value={`http://${pairingData.ip}:5000/?secret=${pairingData.secret}`}
-                                    size={190}
-                                    marginSize={2}
+                                    size={240}
+                                    marginSize={4}
                                 />
                             )}
                         </div>
