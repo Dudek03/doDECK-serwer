@@ -11,7 +11,7 @@
                         "args": "win+d",
                         "command": "hotkey"
                     },
-                    "title": "pulpit",
+                    "title": "Desktop",
                     "type": "ACTION",
                     "w": 1,
                     "x": 4,
@@ -39,7 +39,7 @@
                         "args": "win+e",
                         "command": "hotkey"
                     },
-                    "title": "pliki",
+                    "title": "Files",
                     "type": "ACTION",
                     "w": 1,
                     "x": 3,
@@ -53,7 +53,7 @@
                         "args": "https://www.onet.pl/",
                         "command": "open_url"
                     },
-                    "title": "onet",
+                    "title": "Web",
                     "type": "ACTION",
                     "w": 1,
                     "x": 1,
@@ -120,7 +120,7 @@
                     "payload": {
                         "args": "profile_1793310426088"
                     },
-                    "title": "do melcio",
+                    "title": "Media",
                     "type": "FOLDER",
                     "w": 1,
                     "x": 2,
@@ -134,7 +134,7 @@
                         "args": "\"siemaneczko ziomeczku\"",
                         "command": "write"
                     },
-                    "title": "pisanie",
+                    "title": "Text Macro",
                     "type": "ACTION",
                     "w": 1,
                     "x": 2,
@@ -147,7 +147,7 @@
                     "payload": {
                         "args": "profile_1793018286954"
                     },
-                    "title": "folder",
+                    "title": "Tools",
                     "type": "FOLDER",
                     "w": 1,
                     "x": 1,
@@ -161,7 +161,7 @@
                         "args": "siemka",
                         "command": "write"
                     },
-                    "title": "pisanko",
+                    "title": "Typing",
                     "type": "ACTION",
                     "w": 1,
                     "x": 1,
@@ -173,7 +173,7 @@
                 "rows": 4
             },
             "id": "default",
-            "name": "Główny Panel"
+            "name": "Main Panel"
         },
         {
             "buttons": [
@@ -236,7 +236,7 @@
                     "payload": {
                         "args": "default"
                     },
-                    "title": "Główny panel",
+                    "title": "Main Panel",
                     "type": "FOLDER",
                     "w": 1,
                     "x": 3,
@@ -244,7 +244,7 @@
                 },
                 {
                     "id": "1793310534422",
-                    "title": "melcio",
+                    "title": "Media",
                     "color": "#ee2bb0",
                     "type": "FOLDER",
                     "x": 4,
@@ -261,11 +261,11 @@
                 "rows": 4
             },
             "id": "profile_1793018286954",
-            "name": "folder"
+            "name": "Tools"
         },
         {
             "id": "profile_1793310426088",
-            "name": "melcio",
+            "name": "Media",
             "grid": {
                 "columns": 16,
                 "rows": 8
@@ -273,7 +273,7 @@
             "buttons": [
                 {
                     "id": "1793310438829",
-                    "title": "NOWY FOLDER",
+                    "title": "New Folder",
                     "color": "#8e44ad",
                     "type": "FOLDER",
                     "x": 1,
@@ -286,7 +286,7 @@
                 },
                 {
                     "id": "1793310441514",
-                    "title": "NOWY FOLDER",
+                    "title": "New Folder",
                     "color": "#8e44ad",
                     "type": "FOLDER",
                     "x": 11,
@@ -299,7 +299,7 @@
                 },
                 {
                     "id": "1793310443749",
-                    "title": "NOWY FOLDER",
+                    "title": "New Folder",
                     "color": "#8e44ad",
                     "type": "FOLDER",
                     "x": 12,
@@ -312,7 +312,7 @@
                 },
                 {
                     "id": "1793310445902",
-                    "title": "NOWY FOLDER",
+                    "title": "New Folder",
                     "color": "#8e44ad",
                     "type": "FOLDER",
                     "x": 11,

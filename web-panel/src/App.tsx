@@ -23,6 +23,25 @@ import './styles/styles.css';
 
 const socket = io();
 
+export function getSecretFromUrl(
+    locationSearch: string = typeof window !== 'undefined' ? window.location.search : '',
+    locationHash: string = typeof window !== 'undefined' ? window.location.hash : ''
+): string | null {
+    // 1. Secure read from URL fragment (#secret=...) - RFC 3986 (never sent over the network)
+    if (locationHash) {
+        const hashParams = new URLSearchParams(locationHash.replace(/^[#?]/, ''));
+        const secret = hashParams.get('secret');
+        if (secret) return secret.trim();
+    }
+    // 2. Backwards compatibility with query parameters (?secret=...)
+    if (locationSearch) {
+        const searchParams = new URLSearchParams(locationSearch);
+        const secret = searchParams.get('secret');
+        if (secret) return secret.trim();
+    }
+    return null;
+}
+
 export default function App() {
     const [fullLayoutData, setFullLayoutData] = useState<FullLayoutConfig | null>(null);
     const [activeButtons, setActiveButtons] = useState<TileButton[]>([]);
@@ -33,8 +52,7 @@ export default function App() {
     const [isPairingOpen, setIsPairingOpen] = useState(false);
 
     const [isClientMode, setIsClientMode] = useState<boolean>(() => {
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('secret')) return true;
+        if (getSecretFromUrl()) return true;
         if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
             return false;
         }
@@ -42,13 +60,15 @@ export default function App() {
     });
 
     const [secretKey, setSecretKey] = useState<string | null>((): string | null => {
-        const urlParams = new URLSearchParams(window.location.search);
-        const secretFromUrl = urlParams.get('secret');
+        const secretFromUrl = getSecretFromUrl();
 
         if (secretFromUrl) {
             localStorage.setItem('dodeck_secret', secretFromUrl);
             localStorage.setItem('dodeck_client_mode', 'true');
             setIsClientMode(true);
+            if (window.history && window.history.replaceState) {
+                window.history.replaceState(null, '', window.location.pathname);
+            }
             return secretFromUrl;
         }
 
@@ -69,7 +89,7 @@ export default function App() {
                     setActiveButtons(activeProfile.buttons);
                 }
             } catch (error) {
-                console.error('Błąd pobierania układu:', error);
+                console.error('Error fetching layout:', error);
             }
         };
         fetchLayout();
@@ -92,7 +112,6 @@ export default function App() {
             window.history.replaceState(null, '', window.location.pathname);
         }
 
-        // Zawsze próbujemy pobrać aktualny klucz z serwera (na localhost PC synchronizuje klucz automatycznie)
         axios
             .get<PairingData>('/dispatcher/get_pairing_data')
             .then((res) => {
@@ -102,9 +121,8 @@ export default function App() {
                 }
             })
             .catch(() => {
-                // Poza localhostem (np. w przeglądarce mobilnej) zachowujemy klucz zapisany w localStorage/URL
                 if (!secretKey) {
-                    console.log('Brak uprawnień do pobrania klucza parowania. Używanie zapisanego klucza.');
+                    console.log('No permission to fetch pairing key. Using saved key.');
                 }
             });
     }, []);
@@ -140,7 +158,7 @@ export default function App() {
         }
 
         if (!secretKey) {
-            alert('Brak klucza autoryzacji! Upewnij się, że jesteś na PC lub zeskanowałeś QR Web-Pairing.');
+            alert('Missing authorization key! Ensure you are on PC or scanned the Web-Pairing QR.');
             return;
         }
 
@@ -192,20 +210,20 @@ export default function App() {
                 payload.layouts[profileIndex].buttons = activeButtons;
             }
             await axios.post(`/dispatcher/save_layout`, payload);
-            alert('Układ zapisany pomyślnie!');
+            alert('Layout saved successfully!');
             setIsEditMode(false);
         } catch {
-            alert('Błąd zapisu.');
+            alert('Save error.');
         }
     };
 
     const addNewProfile = () => {
         if (!fullLayoutData) return;
-        const name = prompt('Podaj nazwę nowego profilu:');
+        const name = prompt('Enter new profile name:');
         if (!name) return;
 
         const gridInput = prompt(
-            'Podaj wymiary siatki w formacie KOLUMNY:WIERSZE (np. 8:4, 4:4, 16:8):',
+            'Enter grid dimensions in COLUMNS:ROWS format (e.g. 8:4, 4:4, 16:8):',
             '8:4'
         );
         let cols = 8,
@@ -236,7 +254,7 @@ export default function App() {
     const deleteProfile = () => {
         if (!fullLayoutData) return;
         if (fullLayoutData.layouts.length <= 1) {
-            alert('Nie możesz usunąć jedynego profilu!');
+            alert('You cannot delete the only profile!');
             return;
         }
 
@@ -247,7 +265,7 @@ export default function App() {
 
         if (
             !window.confirm(
-                `Czy na pewno chcesz usunąć profil "${profileToDelete?.name}"? Kafelki (Foldery) z innych układów prowadzące tutaj zostaną usunięte.`
+                `Are you sure you want to delete profile "${profileToDelete?.name}"? Folder tiles linking here will be removed.`
             )
         ) {
             return;
@@ -280,7 +298,7 @@ export default function App() {
     if (!fullLayoutData)
         return (
             <h2 style={{ textAlign: 'center', marginTop: 50, color: 'white' }}>
-                Ładowanie doDECK...
+                Loading doDECK...
             </h2>
         );
     const activeProfile =
@@ -305,7 +323,7 @@ export default function App() {
                                 ...activeButtons,
                                 {
                                     id: Date.now().toString(),
-                                    title: 'NOWY FOLDER',
+                                    title: 'NEW FOLDER',
                                     color: '#8e44ad',
                                     type: 'FOLDER',
                                     x: 1,
@@ -371,11 +389,11 @@ export default function App() {
                                     cursor: 'pointer',
                                 }}
                             >
-                                ⬅ Wstecz
+                                Back
                             </button>
                         )}
                         <span style={{ color: '#aaa', fontSize: '14px', fontWeight: 'bold' }}>
-                            Profil:
+                            Profile:
                         </span>
                         <select
                             value={fullLayoutData.active_layout_id}
@@ -403,7 +421,7 @@ export default function App() {
 
                     <button
                         onClick={() => {
-                            if (window.confirm('Czy chcesz przejść do trybu edytora PC?')) {
+                            if (window.confirm('Do you want to switch to PC editor mode?')) {
                                 localStorage.removeItem('dodeck_client_mode');
                                 setIsClientMode(false);
                             }
@@ -417,9 +435,9 @@ export default function App() {
                             fontSize: '12px',
                             cursor: 'pointer',
                         }}
-                        title="Tryb edytora"
+                        title="Editor mode"
                     >
-                        ⚙️ Edytor
+                        Editor
                     </button>
                 </div>
             )}

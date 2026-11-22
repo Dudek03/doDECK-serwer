@@ -48,7 +48,7 @@ class TestSecurity(unittest.TestCase):
             "/secret-endpoint", environ_base={"REMOTE_ADDR": "192.168.1.100"}
         )
         self.assertEqual(res_remote.status_code, 403)
-        self.assertIn("Brak uprawnień", res_remote.get_json()["error"])
+        self.assertIn("Unauthorized", res_remote.get_json()["error"])
 
     @patch("socket.socket")
     def test_get_local_ip_success(self, mock_socket_cls):

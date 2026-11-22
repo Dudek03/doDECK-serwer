@@ -43,7 +43,7 @@ export default function EditorModal({ tile, profiles, onSave, onCancel, onDelete
             const res = await axios.get('/dispatcher/scan_windows');
             if (res.data && res.data.windows) setScannedWindows(res.data.windows);
         } catch {
-            alert('Błąd skanowania okien.');
+            alert('Error scanning windows.');
         }
     };
 
@@ -65,16 +65,16 @@ export default function EditorModal({ tile, profiles, onSave, onCancel, onDelete
     return (
         <div className="modal-overlay">
             <div className="modal-content">
-                <h3 style={{ margin: '0 0 10px 0', color: '#fff' }}>Edytuj Kafelek</h3>
+                <h3 style={{ margin: '0 0 10px 0', color: '#fff' }}>Edit Tile</h3>
 
-                <label className="modal-label">Tytuł:</label>
+                <label className="modal-label">Title:</label>
                 <input
                     className="modal-input"
                     value={editingTile.title}
                     onChange={(e) => setEditingTile({ ...editingTile, title: e.target.value })}
                 />
 
-                <label className="modal-label">Kolor:</label>
+                <label className="modal-label">Color:</label>
                 <input
                     type="color"
                     value={editingTile.color}
@@ -88,7 +88,7 @@ export default function EditorModal({ tile, profiles, onSave, onCancel, onDelete
                     }}
                 />
 
-                <label className="modal-label">Typ:</label>
+                <label className="modal-label">Type:</label>
                 <select
                     className="modal-input"
                     value={editingTile.type}
@@ -103,16 +103,16 @@ export default function EditorModal({ tile, profiles, onSave, onCancel, onDelete
                         setEditingTile({ ...editingTile, type: newType, payload: defPayload });
                     }}
                 >
-                    <option value="ACTION">Akcja (ACTION)</option>
-                    <option value="FOLDER">Folder / Profil (FOLDER)</option>
-                    <option value="WIDGET">Widżet (WIDGET)</option>
-                    <option value="LIVE DATA">Dane systemowe (LIVE DATA)</option>
-                    <option value="WORKSPACE">Przestrzeń robocza (WORKSPACE)</option>
+                    <option value="ACTION">Action (ACTION)</option>
+                    <option value="FOLDER">Folder / Profile (FOLDER)</option>
+                    <option value="WIDGET">Widget (WIDGET)</option>
+                    <option value="LIVE DATA">System Stats (LIVE DATA)</option>
+                    <option value="WORKSPACE">Workspace (WORKSPACE)</option>
                 </select>
 
                 {editingTile.type === 'FOLDER' && (
                     <>
-                        <label className="modal-label">Wybierz profil docelowy:</label>
+                        <label className="modal-label">Select target profile:</label>
                         <select
                             className="modal-input"
                             value={
@@ -133,15 +133,15 @@ export default function EditorModal({ tile, profiles, onSave, onCancel, onDelete
 
                 {editingTile.type === 'ACTION' && (
                     <>
-                        <label className="modal-label">Komenda:</label>
+                        <label className="modal-label">Command:</label>
                         <select
                             className="modal-input"
                             value={editingTile.payload.command || 'hotkey'}
                             onChange={(e) => updatePayload('command', e.target.value)}
                         >
-                            <option value="hotkey">Skrót klawiszowy</option>
-                            <option value="write">Wpisz tekst (Makro)</option>
-                            <option value="open_url">Strona WWW</option>
+                            <option value="hotkey">Hotkey Shortcut</option>
+                            <option value="write">Type Text (Macro)</option>
+                            <option value="open_url">Open URL</option>
                         </select>
                         <input
                             className="modal-input"
@@ -149,10 +149,10 @@ export default function EditorModal({ tile, profiles, onSave, onCancel, onDelete
                             onChange={(e) => updatePayload('args', e.target.value)}
                             placeholder={
                                 editingTile.payload.command === 'write'
-                                    ? 'Tekst do wpisania...'
+                                    ? 'Text to type...'
                                     : editingTile.payload.command === 'hotkey'
-                                    ? 'np. ctrl+c, alt+tab'
-                                    : 'Parametr...'
+                                    ? 'e.g. ctrl+c, alt+tab'
+                                    : 'Parameter...'
                             }
                         />
                     </>
@@ -161,7 +161,7 @@ export default function EditorModal({ tile, profiles, onSave, onCancel, onDelete
                 {editingTile.type === 'WORKSPACE' && (
                     <>
                         <button className="btn btn-blue" onClick={handleScanWindows}>
-                            🔍 Skanuj otwarte okna
+                            Scan Open Windows
                         </button>
                         <div className="modal-windows-list">
                             {scannedWindows.map((win, idx) => {
@@ -204,13 +204,13 @@ export default function EditorModal({ tile, profiles, onSave, onCancel, onDelete
 
                 <div style={{ display: 'flex', gap: 10, marginTop: 15 }}>
                     <button className="btn btn-green" style={{ flex: 1 }} onClick={handleSave}>
-                        Zapisz
+                        Save
                     </button>
                     <button className="btn btn-dark" style={{ flex: 1 }} onClick={onCancel}>
-                        Anuluj
+                        Cancel
                     </button>
                     <button className="btn btn-red" onClick={() => onDelete(editingTile.id)}>
-                        Usuń
+                        Delete
                     </button>
                 </div>
             </div>

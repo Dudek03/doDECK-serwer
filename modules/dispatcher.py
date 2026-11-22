@@ -1,4 +1,5 @@
-from flask import Blueprint, jsonify, request
+from typing import Tuple, Dict, Any, List, Optional
+from flask import Blueprint, jsonify, request, Response
 import keyboard
 import os
 import sys
@@ -19,19 +20,19 @@ from modules.security import (
 )
 
 dispatcher_bp = Blueprint("dispatcher", __name__)
-CONFIG_FILE = get_config_path("buttons_config.json")
+CONFIG_FILE: str = get_config_path("buttons_config.json")
 
-DEFAULT_LAYOUT = {
+DEFAULT_LAYOUT: Dict[str, Any] = {
     "active_layout_id": "profile_main",
     "layouts": [
         {
             "id": "profile_main",
-            "name": "Główny Panel",
+            "name": "Main Panel",
             "grid": {"columns": 4, "rows": 4},
             "buttons": [
                 {
                     "id": "1",
-                    "title": "pulpit",
+                    "title": "desktop",
                     "color": "#1a1a1a",
                     "type": "ACTION",
                     "x": 1,
@@ -53,7 +54,7 @@ DEFAULT_LAYOUT = {
                 },
                 {
                     "id": "5",
-                    "title": "pliki",
+                    "title": "explorer",
                     "color": "#1a1a1a",
                     "type": "ACTION",
                     "x": 3,
@@ -64,7 +65,7 @@ DEFAULT_LAYOUT = {
                 },
                 {
                     "id": "6",
-                    "title": "onet",
+                    "title": "browser",
                     "color": "#1a1a1a",
                     "type": "ACTION",
                     "x": 4,
@@ -73,12 +74,12 @@ DEFAULT_LAYOUT = {
                     "h": 1,
                     "payload": {
                         "command": "open_url",
-                        "args": "https://www.onet.pl/",
+                        "args": "https://www.google.com/",
                     },
                 },
                 {
                     "id": "3",
-                    "title": "Mixer Audio",
+                    "title": "Audio Mixer",
                     "color": "#2ecc71",
                     "type": "WIDGET",
                     "x": 1,
@@ -126,9 +127,9 @@ DEFAULT_LAYOUT = {
 }
 
 
-def load_default_layout():
-    """Ładuje domyślny układ z dołączonego pliku buttons_config.json lub zwraca DEFAULT_LAYOUT."""
-    # 1. Sprawdź, czy plik jest spakowany w PyInstaller (sys._MEIPASS)
+def load_default_layout() -> Dict[str, Any]:
+    """Loads default layout from bundled buttons_config.json or returns DEFAULT_LAYOUT."""
+    # 1. Check if packaged in PyInstaller (sys._MEIPASS)
     if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
         bundled_path = os.path.join(sys._MEIPASS, "buttons_config.json")
         if os.path.exists(bundled_path):
@@ -138,7 +139,7 @@ def load_default_layout():
             except Exception:
                 pass
 
-    # 2. Sprawdź katalog w repozytorium / obok serwera
+    # 2. Check repo / server root
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     repo_config = os.path.join(base_dir, "buttons_config.json")
     if os.path.exists(repo_config):
@@ -151,28 +152,28 @@ def load_default_layout():
     return DEFAULT_LAYOUT
 
 
-def execute_command(command, args):
-    """Główna funkcja wykonawcza. Eliminuje powtarzanie kodu (DRY)."""
+def execute_command(command: Optional[str], args: Any) -> Tuple[bool, str]:
+    """Executes dispatcher commands (hotkey, write, open_url, workspace)."""
     try:
         if command == "hotkey":
             keyboard.send(args)
-            return True, f"Wysłano skrót: {args}"
+            return True, f"Hotkey sent: {args}"
 
         elif command == "write":
             keyboard.write(args, exact=True)
-            return True, f"Wpisano tekst: {args}"
+            return True, f"Text written: {args}"
 
         elif command == "open_url":
             if isinstance(args, str) and (
                 args.startswith("http://") or args.startswith("https://")
             ):
                 webbrowser.open(args)
-                return True, f"Otwarto stronę: {args}"
-            return False, "Niepoprawny URL (dozwolone tylko http:// lub https://)"
+                return True, f"URL opened: {args}"
+            return False, "Invalid URL (only http:// or https:// allowed)"
 
         elif command == "workspace":
             if not isinstance(args, list):
-                return False, "Niepoprawny format workspace (wymagana lista okien)"
+                return False, "Invalid workspace format (list of windows required)"
 
             for target in args:
                 title = target.get("title", "")
@@ -188,9 +189,9 @@ def execute_command(command, args):
                             if matched_windows:
                                 break
                     except Exception as e:
-                        print(f"[WARN] Błąd startu {exec_path}: {e}")
+                        print(f"[WARN] Error launching {exec_path}: {e}")
 
-                # Przesuwanie i skalowanie
+                # Move and resize window
                 if matched_windows:
                     win = matched_windows[0]
                     try:
@@ -201,17 +202,17 @@ def execute_command(command, args):
                         win.activate()
                     except Exception as e:
                         if "Error code from Windows: 0" not in str(e):
-                            print(f"[WARN] Błąd przesunięcia okna {title}: {e}")
+                            print(f"[WARN] Error moving window {title}: {e}")
 
-            return True, "Zastosowano układ Workspace"
+            return True, "Workspace layout applied"
 
-        return False, f"Nieznana komenda: {command}"
+        return False, f"Unknown command: {command}"
     except Exception as e:
         return False, str(e)
 
 
 @dispatcher_bp.route("/get_layout", methods=["GET"])
-def get_layout():
+def get_layout() -> Tuple[Response, int]:
     config_file = get_config_path("buttons_config.json")
     try:
         if not os.path.exists(config_file):
@@ -221,37 +222,37 @@ def get_layout():
                 with open(config_file, "w", encoding="utf-8") as f:
                     json.dump(default_data, f, ensure_ascii=False, indent=4)
             except Exception as write_err:
-                print(f"[WARN] Nie udało się zapisać domyślnego pliku konfiguracji: {write_err}")
+                print(f"[WARN] Failed to save default config file: {write_err}")
             return jsonify(default_data), 200
 
         with open(config_file, "r", encoding="utf-8-sig") as f:
             layout = json.load(f)
         return jsonify(layout), 200
     except Exception as e:
-        print(f"[WARN] Błąd odczytu layoutu: {e}")
+        print(f"[WARN] Error reading layout: {e}")
         return jsonify(DEFAULT_LAYOUT), 200
 
 
 @dispatcher_bp.route("/save_layout", methods=["POST"])
 @require_localhost
-def save_layout():
+def save_layout() -> Tuple[Response, int]:
     try:
         new_layout = request.get_json(silent=True)
         if not isinstance(new_layout, dict) or "layouts" not in new_layout:
-            return jsonify({"error": "Niepoprawny format danych układu"}), 400
+            return jsonify({"error": "Invalid layout data format"}), 400
 
         config_file = get_config_path("buttons_config.json")
         os.makedirs(os.path.dirname(config_file), exist_ok=True)
         with open(config_file, "w", encoding="utf-8") as f:
             json.dump(new_layout, f, ensure_ascii=False, indent=4)
-        return jsonify({"status": "ok", "msg": "Zapisano układ"}), 200
+        return jsonify({"status": "ok", "msg": "Layout saved successfully"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 
 @dispatcher_bp.route("/scan_windows", methods=["GET"])
 @require_localhost
-def scan_windows():
+def scan_windows() -> Tuple[Response, int]:
     windows = []
     for win in gw.getAllWindows():
         if win.title and win.visible and win.width > 0 and win.height > 0:
@@ -277,30 +278,30 @@ def scan_windows():
                     "exec_path": exec_path,
                 }
             )
-    return jsonify({"status": "ok", "windows": windows})
+    return jsonify({"status": "ok", "windows": windows}), 200
 
 
 @dispatcher_bp.route("/get_pairing_data", methods=["GET"])
 @require_localhost
-def get_pairing_data():
-    """Udostępnia dane do kodu QR. Zablokowane tylko dla localhosta!"""
+def get_pairing_data() -> Tuple[Response, int]:
+    """Provides pairing data for QR code. Restricted to localhost."""
     return jsonify({
         "ip": get_local_ip(),
         "port": 5000,
         "secret": get_or_create_secret()
-    })
+    }), 200
 
 
 @dispatcher_bp.route("/trigger", methods=["POST"])
-def trigger_action_rest():
-    """Bramka dla skryptów zewnętrznych i starego Web Edytora"""
+def trigger_action_rest() -> Tuple[Response, int]:
+    """Gateway for external scripts and REST clients."""
     if not is_localhost(request.remote_addr):
         secret_header = request.headers.get("X-DoDeck-Secret", "")
         expected_secret = get_or_create_secret()
         if not secret_header or not hmac.compare_digest(secret_header, expected_secret):
             return (
                 jsonify(
-                    {"error": "Brak uprawnień. Wymagany localhost lub poprawny nagłówek X-DoDeck-Secret."}
+                    {"error": "Unauthorized. Localhost or valid X-DoDeck-Secret header required."}
                 ),
                 403,
             )
@@ -309,17 +310,17 @@ def trigger_action_rest():
     success, msg = execute_command(data.get("command"), data.get("args", ""))
 
     if success:
-        return jsonify({"status": "ok", "msg": msg})
+        return jsonify({"status": "ok", "msg": msg}), 200
     return jsonify({"error": msg}), 400
 
 
-def register_dispatcher_events(socketio):
-    """Bramka dla natywnej aplikacji mobilnej (ultra-szybka)"""
+def register_dispatcher_events(socketio: Any) -> None:
+    """Socket.IO gateway for native mobile app."""
 
     @socketio.on("trigger_action")
-    def handle_trigger(data):
+    def handle_trigger(data: Any) -> Any:
         if not verify_socket_payload(data, "action"):
-            return
+            return {"status": "error", "msg": "Invalid HMAC or timestamp"}
 
         success, msg = execute_command(
             data.get("command"),
@@ -327,16 +328,18 @@ def register_dispatcher_events(socketio):
         )
         if success:
             print(f"[WS] {msg}")
+            return {"status": "ok", "msg": msg}
         else:
-            print(f"[WS ERROR] Błąd: {msg}")
+            print(f"[WS ERROR] Error: {msg}")
+            return {"status": "error", "msg": msg}
 
     @socketio.on("trigger_macro")
-    def handle_macro(data):
+    def handle_macro(data: Any) -> None:
         if not verify_socket_payload(data, "macro"):
             return
 
         steps = data.get("steps", [])
-        print(f"[WS] Wykonywanie makra ({len(steps)} kroków)...")
+        print(f"[WS] Executing macro ({len(steps)} steps)...")
 
         for step in steps:
             command = step.get("command")

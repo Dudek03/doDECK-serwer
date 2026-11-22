@@ -39,7 +39,7 @@ class TestDispatcher(unittest.TestCase):
     def test_execute_open_url_disallowed_scheme(self):
         success, msg = execute_command("open_url", "javascript:alert(1)")
         self.assertFalse(success)
-        self.assertIn("Niepoprawny URL", msg)
+        self.assertIn("Invalid URL", msg)
 
     @patch("pygetwindow.getWindowsWithTitle")
     @patch("os.startfile")
@@ -69,7 +69,7 @@ class TestDispatcher(unittest.TestCase):
     def test_execute_unknown_command(self):
         success, msg = execute_command("invalid_cmd", "")
         self.assertFalse(success)
-        self.assertIn("Nieznana komenda", msg)
+        self.assertIn("Unknown command", msg)
 
     @patch("keyboard.send")
     def test_execute_command_exception(self, mock_send):

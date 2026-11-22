@@ -5,6 +5,11 @@ import type { AudioVolumeData } from '../types';
 
 describe('AudioMixerModal Component', () => {
     const audioData: AudioVolumeData = {
+        count: 2,
+        apps: [
+            { App: 'Spotify.exe', Volume: 60 },
+            { App: 'Chrome.exe', Volume: 30 },
+        ],
         ilosc: 2,
         aplikacje: [
             { App: 'Spotify.exe', Volume: 60 },
@@ -12,7 +17,7 @@ describe('AudioMixerModal Component', () => {
         ],
     };
 
-    it('renderuje aplikacje i ich poziomy głośności', () => {
+    it('renders applications and volume levels', () => {
         render(
             <AudioMixerModal
                 appsVolume={audioData}
@@ -21,14 +26,14 @@ describe('AudioMixerModal Component', () => {
             />
         );
 
-        expect(screen.getByText('MIXER AUDIO')).not.toBeNull();
+        expect(screen.getByText('AUDIO MIXER')).not.toBeNull();
         expect(screen.getByText('Spotify.exe')).not.toBeNull();
         expect(screen.getByText('Chrome.exe')).not.toBeNull();
         expect(screen.getByText('60%')).not.toBeNull();
         expect(screen.getByText('30%')).not.toBeNull();
     });
 
-    it('wywołuje onVolumeChange po zakończeniu przesuwania suwaka (onMouseUp)', () => {
+    it('calls onVolumeChange on slider mouse up', () => {
         const handleVolumeChange = vi.fn();
         render(
             <AudioMixerModal
@@ -44,7 +49,7 @@ describe('AudioMixerModal Component', () => {
         expect(handleVolumeChange).toHaveBeenCalledWith('Spotify.exe', 80);
     });
 
-    it('wywołuje onClose po kliknięciu ZAMKNIJ', () => {
+    it('calls onClose when clicking CLOSE', () => {
         const handleClose = vi.fn();
         render(
             <AudioMixerModal
@@ -54,7 +59,7 @@ describe('AudioMixerModal Component', () => {
             />
         );
 
-        fireEvent.click(screen.getByText('ZAMKNIJ'));
+        fireEvent.click(screen.getByText('CLOSE'));
         expect(handleClose).toHaveBeenCalledTimes(1);
     });
 });

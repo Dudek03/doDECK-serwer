@@ -3,7 +3,7 @@ import { Responsive as ResponsiveGridLayout } from 'react-grid-layout';
 import type { TileButton, LayoutData, SystemData, GridLayoutItem } from '../types';
 import Tile from './Tile';
 
-// Wariant Responsive wymusza na bibliotece użycie naszych kolumn bez domyślnych 12
+// Responsive variant forces react-grid-layout to use our explicit column count without defaulting to 12
 const Grid = ResponsiveGridLayout as ComponentType<any>;
 
 interface DevicePreviewProps {
@@ -32,7 +32,7 @@ export default function DevicePreview({
         if (containerRef.current) {
             const { clientWidth, clientHeight } = containerRef.current;
             setDimensions({
-                width: clientWidth - 30, // Minus padding ramki
+                width: clientWidth - 30, // Minus frame padding
                 height: clientHeight - 30,
             });
         }
@@ -80,7 +80,7 @@ export default function DevicePreview({
     return (
         <div className="preview-container">
             <div ref={containerRef} className="tablet-frame">
-                {/* SIATKA TŁA */}
+                {/* BACKGROUND GRID */}
                 {isEditMode && (
                     <div
                         style={{
@@ -124,7 +124,7 @@ export default function DevicePreview({
                     </div>
                 )}
 
-                {/* WŁAŚCIWE KAFELKI */}
+                {/* TILES */}
                 <div style={{ position: 'relative', zIndex: 1 }}>
                     <Grid
                         key={`fg-${activeProfile?.id}-${columns}-${rows}`}

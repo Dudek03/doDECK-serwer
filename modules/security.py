@@ -6,15 +6,16 @@ import hashlib
 import time
 import socket
 from functools import wraps
-from flask import request, jsonify
+from typing import Optional, Dict, Any, Callable
+from flask import request, jsonify, Response
 from modules.paths import get_config_path
 
-TOKEN_FILE = get_config_path("trusted_devices.json")
-SEEN_SIGNATURES = {}  # signature: expiration_time
+TOKEN_FILE: str = get_config_path("trusted_devices.json")
+SEEN_SIGNATURES: Dict[str, float] = {}  # signature: expiration_time
 
 
-def is_localhost(remote_addr):
-    """Sprawdza, czy zapytanie pochodzi z lokalnej maszyny hosta."""
+def is_localhost(remote_addr: Optional[str]) -> bool:
+    """Checks whether the request originates from the local host machine."""
     if not remote_addr:
         return False
     return (
@@ -23,33 +24,33 @@ def is_localhost(remote_addr):
     )
 
 
-def require_localhost(f):
-    """Dekorator blokujący dostęp do wrażliwych endpointów dla urządzeń spoza localhosta."""
+def require_localhost(f: Callable[..., Any]) -> Callable[..., Any]:
+    """Decorator blocking access to sensitive endpoints for devices outside localhost."""
     @wraps(f)
-    def decorated_function(*args, **kwargs):
+    def decorated_function(*args: Any, **kwargs: Any) -> Any:
         if not is_localhost(request.remote_addr):
             return jsonify(
-                {"error": "Brak uprawnień. Dostęp dozwolony tylko z lokalnej maszyny (PC)."}
+                {"error": "Unauthorized. Access allowed only from local host machine (PC)."}
             ), 403
         return f(*args, **kwargs)
 
     return decorated_function
 
 
-def get_local_ip():
-    """Pobiera lokalne IP serwera w sieci Wi-Fi"""
+def get_local_ip() -> str:
+    """Retrieves local Wi-Fi / LAN IP address of the server."""
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.connect(("8.8.8.8", 80))
-        ip = s.getsockname()[0]
+        ip = str(s.getsockname()[0])
         s.close()
         return ip
     except Exception:
         return "127.0.0.1"
 
 
-def get_or_create_secret():
-    """Pobiera istniejący klucz lub generuje nowy, 64-znakowy i bezpiecznie zapisuje do pliku."""
+def get_or_create_secret() -> str:
+    """Retrieves existing secret key or generates a new 64-char key and securely saves it."""
     token_file = get_config_path("trusted_devices.json")
     if os.path.exists(token_file):
         try:
@@ -67,12 +68,12 @@ def get_or_create_secret():
         with open(token_file, "w", encoding="utf-8") as f:
             json.dump({"secret": new_secret}, f, indent=4)
     except Exception as e:
-        print(f"[WARN] [Security] Błąd zapisu klucza do pliku: {e}")
+        print(f"[WARN] [Security] Error saving secret key to file: {e}")
     return new_secret
 
 
-def rotate_secret():
-    """Generuje nowy klucz, unieważniając dotychczas sparowane urządzenia."""
+def rotate_secret() -> str:
+    """Generates a new secret key, invalidating previously paired devices."""
     token_file = get_config_path("trusted_devices.json")
     new_secret = secrets.token_hex(32)
     try:
@@ -80,12 +81,12 @@ def rotate_secret():
         with open(token_file, "w", encoding="utf-8") as f:
             json.dump({"secret": new_secret}, f, indent=4)
     except Exception as e:
-        print(f"[WARN] [Security] Błąd zapisu nowego klucza: {e}")
+        print(f"[WARN] [Security] Error saving new secret key: {e}")
     return new_secret
 
 
-def _is_signature_replayed(signature, current_time):
-    """Wykrywa ponowne użycie tego samego podpisu w oknie czasowym (ochrona przed replay attack)."""
+def _is_signature_replayed(signature: str, current_time: float) -> bool:
+    """Detects reuse of the same signature within the time window (replay attack protection)."""
     expired = [sig for sig, exp in SEEN_SIGNATURES.items() if exp < current_time]
     for sig in expired:
         del SEEN_SIGNATURES[sig]
@@ -97,11 +98,11 @@ def _is_signature_replayed(signature, current_time):
     return False
 
 
-def verify_socket_payload(data_dict, action_type):
+def verify_socket_payload(data_dict: Any, action_type: str) -> bool:
     """
-    Weryfikuje podpis HMAC dla Socket.IO.
-    data_dict: Słownik odebrany z frontendu (musi zawierać 'timestamp' i 'signature')
-    action_type: 'action' (dla trigger_action) lub 'macro' (dla trigger_macro)
+    Verifies HMAC signature for incoming Socket.IO events.
+    data_dict: Dictionary received from client (must contain 'timestamp' and 'signature')
+    action_type: 'action' (for trigger_action) or 'macro' (for trigger_macro)
     """
     if not isinstance(data_dict, dict):
         return False
@@ -110,22 +111,22 @@ def verify_socket_payload(data_dict, action_type):
     timestamp = data_dict.get("timestamp")
 
     if not signature or not timestamp:
-        print("[Security] Odrzucono: Brak podpisu lub czasu.")
+        print("[Security] Rejected: Missing signature or timestamp.")
         return False
 
     current_time = time.time()
     try:
         ts = float(timestamp)
-        # Odrzucamy zapytania starsze niż 10s lub wyprzedzające zegar o więcej niż 10s
+        # Reject requests older than 10s or ahead by more than 10s
         if abs(current_time - ts) > 10:
-            print("[Security] Odrzucono: Zbyt stare lub przyszłe zapytanie (Replay/Skew).")
+            print("[Security] Rejected: Timestamp out of bounds (Replay/Skew).")
             return False
     except (ValueError, TypeError):
         return False
 
-    # Sprawdzenie pamięci unikalnych podpisów (odrzucenie powtórzonego pakietu w oknie 10s)
+    # Check memory of unique signatures (replay attack check)
     if _is_signature_replayed(signature, current_time):
-        print("[Security] Odrzucono: Wykryto powtórzone zapytanie (Replay Attack).")
+        print("[Security] Rejected: Signature replayed (Replay Attack).")
         return False
 
     if action_type == "action":
@@ -154,5 +155,5 @@ def verify_socket_payload(data_dict, action_type):
     if hmac.compare_digest(signature, expected_signature):
         return True
     else:
-        print("[Security] Odrzucono: Błędny podpis HMAC.")
+        print("[Security] Rejected: Invalid HMAC signature.")
         return False

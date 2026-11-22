@@ -63,8 +63,10 @@ export interface AudioApp {
 }
 
 export interface AudioVolumeData {
-    ilosc: number;
-    aplikacje: AudioApp[];
+    count?: number;
+    apps?: AudioApp[];
+    ilosc?: number;
+    aplikacje?: AudioApp[];
 }
 
 export interface PairingData {

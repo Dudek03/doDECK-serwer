@@ -11,8 +11,11 @@ export default function AudioMixerModal({ appsVolume, onClose, onVolumeChange }:
     const [apps, setApps] = useState<AudioApp[]>([]);
 
     useEffect(() => {
-        if (appsVolume && Array.isArray(appsVolume.aplikacje)) {
-            setApps(appsVolume.aplikacje);
+        if (appsVolume) {
+            const list = appsVolume.apps || appsVolume.aplikacje;
+            if (Array.isArray(list)) {
+                setApps(list);
+            }
         }
     }, [appsVolume]);
 
@@ -37,7 +40,7 @@ export default function AudioMixerModal({ appsVolume, onClose, onVolumeChange }:
                         color: '#fff',
                     }}
                 >
-                    MIXER AUDIO
+                    AUDIO MIXER
                 </h3>
 
                 <div
@@ -89,7 +92,7 @@ export default function AudioMixerModal({ appsVolume, onClose, onVolumeChange }:
                     onClick={onClose}
                     style={{ marginTop: '20px', width: '100%', padding: '12px', fontSize: '1.1rem' }}
                 >
-                    ZAMKNIJ
+                    CLOSE
                 </button>
             </div>
         </div>

@@ -1,18 +1,19 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import Header from '../components/Header';
+import { getSecretFromUrl } from '../App';
 import type { FullLayoutConfig } from '../types';
 
 const mockLayoutData: FullLayoutConfig = {
     active_layout_id: 'profile_1',
     layouts: [
-        { id: 'profile_1', name: 'Główny', grid: { columns: 4, rows: 4 }, buttons: [] },
-        { id: 'profile_2', name: 'Muzyka', grid: { columns: 4, rows: 4 }, buttons: [] },
+        { id: 'profile_1', name: 'Main', grid: { columns: 4, rows: 4 }, buttons: [] },
+        { id: 'profile_2', name: 'Music', grid: { columns: 4, rows: 4 }, buttons: [] },
     ],
 };
 
 describe('Header Component', () => {
-    it('nie renderuje przycisku Wstecz gdy stos (profileStack) jest pusty', () => {
+    it('does not render Back button when profileStack is empty', () => {
         render(
             <Header
                 layoutData={mockLayoutData}
@@ -29,10 +30,10 @@ describe('Header Component', () => {
             />
         );
 
-        expect(screen.queryByText('⬅ Wstecz')).toBeNull();
+        expect(screen.queryByText('Back')).toBeNull();
     });
 
-    it('renderuje przycisk Wstecz gdy jesteśmy w podfolderze (stos ma elementy)', () => {
+    it('renders Back button when profileStack is not empty', () => {
         const mockGoBack = vi.fn();
         render(
             <Header
@@ -50,13 +51,13 @@ describe('Header Component', () => {
             />
         );
 
-        const backBtn = screen.getByText('⬅ Wstecz');
+        const backBtn = screen.getByText('Back');
         expect(backBtn).not.toBeNull();
         fireEvent.click(backBtn);
         expect(mockGoBack).toHaveBeenCalledTimes(1);
     });
 
-    it('renderuje przyciski dodawania kafelka i zapisu tylko w trybie edycji', () => {
+    it('renders Add Tile and Save Layout buttons only in edit mode', () => {
         const { rerender } = render(
             <Header
                 layoutData={mockLayoutData}
@@ -73,8 +74,8 @@ describe('Header Component', () => {
             />
         );
 
-        expect(screen.queryByText('+ Kafelek')).toBeNull();
-        expect(screen.queryByText('Zapisz układ')).toBeNull();
+        expect(screen.queryByText('+ Tile')).toBeNull();
+        expect(screen.queryByText('Save Layout')).toBeNull();
 
         rerender(
             <Header
@@ -92,11 +93,11 @@ describe('Header Component', () => {
             />
         );
 
-        expect(screen.getByText('+ Kafelek')).not.toBeNull();
-        expect(screen.getByText('Zapisz układ')).not.toBeNull();
+        expect(screen.getByText('+ Tile')).not.toBeNull();
+        expect(screen.getByText('Save Layout')).not.toBeNull();
     });
 
-    it('wywołuje onSwitchProfile po zmianie profilu w select', () => {
+    it('calls onSwitchProfile when profile select changes', () => {
         const mockSwitch = vi.fn();
         render(
             <Header
@@ -119,7 +120,7 @@ describe('Header Component', () => {
         expect(mockSwitch).toHaveBeenCalledWith('profile_2');
     });
 
-    it('wywołuje onOpenPairing po kliknięciu Paruj', () => {
+    it('calls onOpenPairing when clicking Pair button', () => {
         const mockOpenPairing = vi.fn();
         render(
             <Header
@@ -137,7 +138,29 @@ describe('Header Component', () => {
             />
         );
 
-        fireEvent.click(screen.getByText('Paruj'));
+        fireEvent.click(screen.getByText('Pair'));
         expect(mockOpenPairing).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe('getSecretFromUrl Utility (RFC 3986 Pairing Security)', () => {
+    it('securely reads secret from URL fragment (#secret=...) without network transmission', () => {
+        const secret = getSecretFromUrl('', '#secret=abc123token');
+        expect(secret).toBe('abc123token');
+    });
+
+    it('prioritizes hash fragment over query string for security', () => {
+        const secret = getSecretFromUrl('?secret=old_insecure', '#secret=secure_hash_token');
+        expect(secret).toBe('secure_hash_token');
+    });
+
+    it('supports backwards compatibility with query string (?secret=...)', () => {
+        const secret = getSecretFromUrl('?secret=legacy_token', '');
+        expect(secret).toBe('legacy_token');
+    });
+
+    it('returns null when no secret is present in URL', () => {
+        expect(getSecretFromUrl('', '')).toBeNull();
+        expect(getSecretFromUrl('?other=123', '#section=test')).toBeNull();
     });
 });

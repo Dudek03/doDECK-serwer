@@ -8,7 +8,7 @@ describe('Tile Component', () => {
 
     const actionBtn: TileButton = {
         id: '1',
-        title: 'Kalkulator',
+        title: 'Calculator',
         color: '#ff0000',
         type: 'ACTION',
         x: 1,
@@ -30,7 +30,7 @@ describe('Tile Component', () => {
         payload: { sensor: 'ram' },
     };
 
-    it('renderuje zwykły kafelek akcji z tytułem', () => {
+    it('renders normal action tile with title', () => {
         render(
             <Tile
                 btn={actionBtn}
@@ -40,10 +40,10 @@ describe('Tile Component', () => {
                 onClick={vi.fn()}
             />
         );
-        expect(screen.getByText('Kalkulator')).not.toBeNull();
+        expect(screen.getByText('Calculator')).not.toBeNull();
     });
 
-    it('renderuje kafelek LIVE DATA z poprawną wartością z systemData', () => {
+    it('renders LIVE DATA tile with value from systemData', () => {
         render(
             <Tile
                 btn={liveDataBtn}
@@ -56,7 +56,7 @@ describe('Tile Component', () => {
         expect(screen.getByText('70%')).not.toBeNull();
     });
 
-    it('wywołuje onClick po naciśnięciu w trybie zwykłym', () => {
+    it('calls onClick when pressed in normal mode', () => {
         const handleClick = vi.fn();
         render(
             <Tile
@@ -68,11 +68,11 @@ describe('Tile Component', () => {
             />
         );
 
-        fireEvent.pointerDown(screen.getByText('Kalkulator'));
+        fireEvent.pointerDown(screen.getByText('Calculator'));
         expect(handleClick).toHaveBeenCalledWith(actionBtn);
     });
 
-    it('nie wywołuje onClick w trybie edycji, ale renderuje przycisk ⚙', () => {
+    it('does not call onClick in edit mode, but renders Edit button', () => {
         const handleClick = vi.fn();
         const handleEdit = vi.fn();
         render(
@@ -85,7 +85,7 @@ describe('Tile Component', () => {
             />
         );
 
-        const editBtn = screen.getByText('⚙');
+        const editBtn = screen.getByText('Edit');
         expect(editBtn).not.toBeNull();
 
         fireEvent.pointerDown(editBtn);

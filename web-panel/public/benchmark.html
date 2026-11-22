@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>doDECK - Benchmark Wydajnościowy RTT</title>
+    <script src="/crypto-js.js"></script>
+    <script src="/socket.io.min.js"></script>
+    <script src="/qrcode.min.js"></script>
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --card-bg: #1e293b;
+            --accent-green: #2ecc71;
+            --accent-blue: #38bdf8;
+            --text-light: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-color: #334155;
+            --danger: #ef4444;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            width: 100%;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        .header h1 {
+            font-size: 26px;
+            color: var(--accent-green);
+            margin-bottom: 6px;
+        }
+        .header p {
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 14px;
+            padding: 24px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+        .qr-section {
+            text-align: center;
+            display: none;
+            padding: 16px;
+            background: rgba(15, 23, 42, 0.6);
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border: 1px dashed var(--accent-blue);
+        }
+        .qr-section h3 {
+            font-size: 16px;
+            color: var(--accent-blue);
+            margin-bottom: 8px;
+        }
+        .qr-section p {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+        }
+        #qrcode-canvas {
+            display: flex;
+            justify-content: center;
+            margin: 12px auto;
+            background: white;
+            padding: 12px;
+            border-radius: 8px;
+            width: fit-content;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            background: rgba(46, 204, 113, 0.15);
+            color: var(--accent-green);
+            margin-bottom: 16px;
+        }
+        .form-group {
+            margin-bottom: 16px;
+        }
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+        .form-input {
+            width: 100%;
+            padding: 10px 14px;
+            background: #0f172a;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            font-family: monospace;
+        }
+        .btn-start {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .btn-start:hover {
+            opacity: 0.95;
+            transform: translateY(-1px);
+        }
+        .btn-start:disabled {
+            background: #475569;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .progress-box {
+            display: none;
+            margin-top: 18px;
+        }
+        .progress-bar-bg {
+            background: #0f172a;
+            height: 10px;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+        .progress-bar-fill {
+            background: var(--accent-blue);
+            height: 100%;
+            width: 0%;
+            transition: width 0.1s linear;
+        }
+        .progress-text {
+            font-size: 13px;
+            color: var(--text-muted);
+            text-align: center;
+        }
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            display: none;
+        }
+        .results-table th, .results-table td {
+            padding: 12px 14px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 14px;
+        }
+        .results-table th {
+            background: #0f172a;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+        .results-table tr:hover {
+            background: rgba(255,255,255,0.02);
+        }
+        .highlight-green {
+            color: var(--accent-green);
+            font-weight: 700;
+        }
+        .highlight-blue {
+            color: var(--accent-blue);
+            font-weight: 700;
+        }
+        .log-box {
+            margin-top: 18px;
+            background: #0b0f19;
+            border: 1px solid #1e293b;
+            border-radius: 8px;
+            padding: 12px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 160px;
+            overflow-y: auto;
+            color: #94a3b8;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>doDECK Benchmark RTT</h1>
+            <p>Empiryczny pomiar latencji WebSocket + HMAC vs HTTP POST (N = 100 prób)</p>
+        </div>
+
+        <div class="card">
+            <div id="device-status" class="status-badge">Wykrywanie środowiska...</div>
+
+            <div id="qr-section" class="qr-section">
+                <h3>Skanuj smartfonem Xiaomi 11T 5G</h3>
+                <p>Otwórz aparat w telefonie i zeskanuj kod, aby zmierzyć latencję bezpośrednio przez sieć Wi-Fi:</p>
+                <div id="qrcode-canvas"></div>
+                <p id="qr-url-text" style="word-break: break-all; font-family: monospace; font-size: 11px; margin-top: 6px;"></p>
+            </div>
+
+            <div class="form-group">
+                <label>Klucz sesji doDECK (HMAC Secret):</label>
+                <input type="text" id="secret-input" class="form-input" placeholder="Wczytywanie klucza sesji..." />
+            </div>
+
+            <button id="btn-start" class="btn-start" onclick="runBenchmark()">Rozpocznij test opóźnień (N = 100)</button>
+
+            <div id="progress-box" class="progress-box">
+                <div class="progress-bar-bg">
+                    <div id="progress-fill" class="progress-bar-fill"></div>
+                </div>
+                <div id="progress-text" class="progress-text">Inicjalizacja testu...</div>
+            </div>
+
+            <div id="log-box" class="log-box"></div>
+
+            <table id="results-table" class="results-table">
+                <thead>
+                    <tr>
+                        <th>Parametr statystyczny</th>
+                        <th>WebSocket + HMAC (doDECK)</th>
+                        <th>HTTP POST (REST)</th>
+                        <th>Zysk wydajnościowy</th>
+                    </tr>
+                </thead>
+                <tbody id="results-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const NUM_SAMPLES = 100;
+        let secretKey = '';
+        let isLocalhost = false;
+
+        function hmacSha256(secret, message) {
+            if (typeof CryptoJS !== 'undefined' && CryptoJS.HmacSHA256) {
+                return CryptoJS.HmacSHA256(message, secret).toString(CryptoJS.enc.Hex);
+            }
+            throw new Error('Biblioteka kryptograficzna CryptoJS nie została załadowana.');
+        }
+
+        const log = (msg) => {
+            const box = document.getElementById('log-box');
+            box.style.display = 'block';
+            box.innerHTML += `<div>[${new Date().toLocaleTimeString()}] ${msg}</div>`;
+            box.scrollTop = box.scrollHeight;
+        };
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            const host = window.location.hostname;
+            isLocalhost = (host === 'localhost' || host === '127.0.0.1');
+
+            // 1. Sprawdź czy sekret jest w hashu URL (#secret=...)
+            if (window.location.hash.includes('secret=')) {
+                const params = new URLSearchParams(window.location.hash.substring(1));
+                secretKey = params.get('secret') || '';
+            }
+
+            // 2. Jeśli jesteśmy na localhost, spróbuj pobrać pairing data i wygenerować QR
+            if (isLocalhost) {
+                document.getElementById('device-status').textContent = 'Stacja robocza (PC / Localhost)';
+                document.getElementById('device-status').style.background = 'rgba(56, 189, 248, 0.15)';
+                document.getElementById('device-status').style.color = '#38bdf8';
+
+                try {
+                    const res = await fetch('/api/pairing');
+                    if (res.ok) {
+                        const data = await res.json();
+                        secretKey = data.secret;
+                        document.getElementById('secret-input').value = secretKey;
+
+                        const mobileUrl = `http://${data.ip}:5000/benchmark#secret=${data.secret}`;
+                        document.getElementById('qr-section').style.display = 'block';
+                        document.getElementById('qr-url-text').textContent = mobileUrl;
+
+                        new QRCode(document.getElementById("qrcode-canvas"), {
+                            text: mobileUrl,
+                            width: 170,
+                            height: 170,
+                            colorDark : "#000000",
+                            colorLight : "#ffffff",
+                            correctLevel : QRCode.CorrectLevel.M
+                        });
+                    }
+                } catch (_) {}
+            } else {
+                // Urządzenie mobilne przez Wi-Fi
+                document.getElementById('device-status').textContent = 'Smartfon (Połączenie przez Wi-Fi)';
+                if (secretKey) {
+                    document.getElementById('secret-input').value = secretKey;
+                }
+            }
+        });
+
+        async function runBenchmark() {
+            const btn = document.getElementById('btn-start');
+            btn.disabled = true;
+
+            try {
+                const secret = document.getElementById('secret-input').value.trim();
+                if (!secret) {
+                    alert('Proszę podać klucz sesji (Secret Key).');
+                    btn.disabled = false;
+                    return;
+                }
+
+                document.getElementById('progress-box').style.display = 'block';
+                document.getElementById('results-table').style.display = 'none';
+                document.getElementById('log-box').innerHTML = '';
+
+                const httpLatencies = [];
+                const wsLatencies = [];
+
+                // KROK 1: HTTP POST REST
+                log(`[1/2] Rozpoczynanie testu HTTP REST (próba N=${NUM_SAMPLES})...`);
+                for (let i = 0; i < NUM_SAMPLES; i++) {
+                    const start = performance.now();
+                    try {
+                        const resp = await fetch('/dispatcher/trigger', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-DoDeck-Secret': secret
+                            },
+                            body: JSON.stringify({ command: 'hotkey', args: 'shift' })
+                        });
+                        const end = performance.now();
+                        if (resp.ok) {
+                            httpLatencies.push(end - start);
+                        } else {
+                            log(`Błąd HTTP ${i}: status ${resp.status}`);
+                        }
+                    } catch (e) {
+                        log(`Błąd HTTP ${i}: ${e.message}`);
+                    }
+                    const progress = Math.round(((i + 1) / (NUM_SAMPLES * 2)) * 100);
+                    document.getElementById('progress-fill').style.width = `${progress}%`;
+                    document.getElementById('progress-text').textContent = `Test HTTP REST: ${i + 1}/${NUM_SAMPLES}`;
+                    await new Promise(r => setTimeout(r, 10));
+                }
+
+                // KROK 2: WebSocket + HMAC
+                log(`[2/2] Łączenie z WebSocket (Socket.IO)...`);
+                const socket = io({ transports: ['websocket', 'polling'] });
+
+                await new Promise((resolve) => {
+                    socket.on('connect', () => {
+                        log(`Połączono z WebSocket. Rozpoczynanie ${NUM_SAMPLES} prób...`);
+                        resolve();
+                    });
+                    socket.on('connect_error', (err) => {
+                        log(`Błąd połączenia WebSocket: ${err}`);
+                        resolve();
+                    });
+                });
+
+                for (let i = 0; i < NUM_SAMPLES; i++) {
+                    const timestamp = (Date.now() / 1000).toString();
+                    const command = "hotkey";
+                    const args = "shift";
+                    const rawString = `${command}${args}${timestamp}`;
+                    const signature = hmacSha256(secret, rawString);
+
+                    const packet = { command, args, timestamp, signature };
+
+                    const start = performance.now();
+                    await new Promise((resolve) => {
+                        let handled = false;
+                        const timer = setTimeout(() => {
+                            if (!handled) {
+                                handled = true;
+                                const end = performance.now();
+                                wsLatencies.push(end - start);
+                                resolve();
+                            }
+                        }, 1000);
+
+                        socket.emit('trigger_action', packet, (ack) => {
+                            if (!handled) {
+                                handled = true;
+                                clearTimeout(timer);
+                                const end = performance.now();
+                                wsLatencies.push(end - start);
+                                resolve();
+                            }
+                        });
+                    });
+
+                    const progress = Math.round(50 + (((i + 1) / (NUM_SAMPLES * 2)) * 100));
+                    document.getElementById('progress-fill').style.width = `${progress}%`;
+                    document.getElementById('progress-text').textContent = `Test WebSocket + HMAC: ${i + 1}/${NUM_SAMPLES}`;
+                    await new Promise(r => setTimeout(r, 10));
+                }
+
+                socket.disconnect();
+                btn.disabled = false;
+                document.getElementById('progress-text').textContent = 'Pomiary zakończone sukcesem!';
+
+                displayResults(wsLatencies, httpLatencies);
+            } catch (err) {
+                log(`BŁĄD WYKONANIA BENCHMARKU: ${err.message}`);
+                console.error(err);
+                btn.disabled = false;
+                document.getElementById('progress-text').textContent = 'Wystąpił błąd podczas testu.';
+            }
+        }
+
+        function calculateStats(arr) {
+            if (!arr || arr.length === 0) return null;
+            const sorted = [...arr].sort((a, b) => a - b);
+            const min = sorted[0];
+            const max = sorted[sorted.length - 1];
+            const sum = sorted.reduce((acc, v) => acc + v, 0);
+            const mean = sum / sorted.length;
+            const median = sorted.length % 2 === 0
+                ? (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2
+                : sorted[Math.floor(sorted.length / 2)];
+            const variance = sorted.reduce((acc, v) => acc + Math.pow(v - mean, 2), 0) / sorted.length;
+            const stdev = Math.sqrt(variance);
+
+            return { min, mean, median, max, stdev };
+        }
+
+        function displayResults(wsData, httpData) {
+            const ws = calculateStats(wsData);
+            const http = calculateStats(httpData);
+
+            if (!ws && !http) {
+                log('Niewystarczająca liczba danych do podsumowania.');
+                return;
+            }
+
+            const speedupMean = (ws && http) ? (http.mean / ws.mean).toFixed(2) : 'N/A';
+            const speedupMin = (ws && http) ? (http.min / ws.min).toFixed(2) : 'N/A';
+            const speedupMedian = (ws && http) ? (http.median / ws.median).toFixed(2) : 'N/A';
+            const speedupMax = (ws && http) ? (http.max / ws.max).toFixed(2) : 'N/A';
+            const jitterReduction = (ws && http) ? (http.stdev / ws.stdev).toFixed(2) : 'N/A';
+
+            const rows = [
+                { label: 'Wartość minimalna (Min)', ws: ws ? `${ws.min.toFixed(2)} ms` : 'Brak danych', http: http ? `${http.min.toFixed(2)} ms` : 'Błąd żądań', gain: speedupMin !== 'N/A' ? `<b>${speedupMin}x</b> szybciej` : 'N/A' },
+                { label: 'Wartość średnia (Mean)', ws: ws ? `<span class="highlight-green">${ws.mean.toFixed(2)} ms</span>` : 'Brak danych', http: http ? `<span class="highlight-blue">${http.mean.toFixed(2)} ms</span>` : 'Błąd żądań', gain: speedupMean !== 'N/A' ? `<b>${speedupMean}x</b> szybciej` : 'N/A' },
+                { label: 'Mediana (Median)', ws: ws ? `${ws.median.toFixed(2)} ms` : 'Brak danych', http: http ? `${http.median.toFixed(2)} ms` : 'Błąd żądań', gain: speedupMedian !== 'N/A' ? `<b>${speedupMedian}x</b> szybciej` : 'N/A' },
+                { label: 'Wartość maksymalna (Max)', ws: ws ? `${ws.max.toFixed(2)} ms` : 'Brak danych', http: http ? `${http.max.toFixed(2)} ms` : 'Błąd żądań', gain: speedupMax !== 'N/A' ? `<b>${speedupMax}x</b> szybciej` : 'N/A' },
+                { label: 'Odchylenie standardowe (σ)', ws: ws ? `± ${ws.stdev.toFixed(2)} ms` : 'Brak danych', http: http ? `± ${http.stdev.toFixed(2)} ms` : 'Błąd żądań', gain: jitterReduction !== 'N/A' ? `<b>${jitterReduction}x</b> mniejszy jitter` : 'N/A' }
+            ];
+
+            const tbody = document.getElementById('results-body');
+            tbody.innerHTML = rows.map(r => `
+                <tr>
+                    <td><b>${r.label}</b></td>
+                    <td>${r.ws}</td>
+                    <td>${r.http}</td>
+                    <td><span class="highlight-green">${r.gain}</span></td>
+                </tr>
+            `).join('');
+
+            document.getElementById('results-table').style.display = 'table';
+            if (speedupMean !== 'N/A') {
+                log(`Wygenerowano zestawienie wyników. Średni zysk WebSocket: ${speedupMean}x!`);
+            } else {
+                log(`Wygenerowano zestawienie wyników dla dostępnych danych.`);
+            }
+        }
+    </script>
+</body>
+</html>

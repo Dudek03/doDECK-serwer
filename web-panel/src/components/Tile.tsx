@@ -26,12 +26,16 @@ export default function Tile({ btn, isEditMode, systemData, onEdit, onClick }: T
             {isEditMode && (
                 <div
                     className="tile-edit-btn"
+                    title="Edit"
+                    aria-label="Edit"
+                    data-testid="tile-edit-btn"
+                    style={{ fontSize: '11px', fontWeight: 'bold' }}
                     onPointerDown={(e) => {
                         e.stopPropagation();
                         onEdit(btn);
                     }}
                 >
-                    ⚙
+                    Edit
                 </div>
             )}
 

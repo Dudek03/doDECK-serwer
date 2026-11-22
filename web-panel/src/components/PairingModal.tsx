@@ -21,7 +21,7 @@ export default function PairingModal({ onClose }: PairingModalProps) {
             })
             .catch(() => {
                 setError(
-                    'Nie udało się pobrać danych parowania. Upewnij się, że używasz edytora na maszynie hosta (localhost).'
+                    'Failed to load pairing data. Ensure you are accessing the editor from the host machine (localhost).'
                 );
             });
     }, []);
@@ -62,16 +62,15 @@ export default function PairingModal({ onClose }: PairingModalProps) {
                 }}
             >
                 <h2 style={{ color: '#fff', marginTop: 0, marginBottom: '16px', fontSize: '22px' }}>
-                    Parowanie Urządzenia
+                    Device Pairing
                 </h2>
 
                 {error && <p style={{ color: '#ef4444', fontWeight: 'bold' }}>{error}</p>}
 
-                {!error && !pairingData && <p style={{ color: '#94a3b8' }}>Ładowanie bezpiecznego klucza...</p>}
+                {!error && !pairingData && <p style={{ color: '#94a3b8' }}>Loading secure key...</p>}
 
                 {pairingData && (
                     <div>
-                        {/* Zakładki wyboru trybu parowania */}
                         <div
                             style={{
                                 display: 'flex',
@@ -93,7 +92,7 @@ export default function PairingModal({ onClose }: PairingModalProps) {
                                     transition: 'all 0.2s',
                                 }}
                             >
-                                Aplikacja mobilna
+                                Mobile App
                             </button>
                             <button
                                 onClick={() => setActiveTab('browser')}
@@ -108,11 +107,10 @@ export default function PairingModal({ onClose }: PairingModalProps) {
                                     transition: 'all 0.2s',
                                 }}
                             >
-                                Przeglądarka (iOS/Web)
+                                Browser (iOS/Web)
                             </button>
                         </div>
 
-                        {/* Kontener z kodem QR */}
                         <div
                             style={{
                                 background: '#fff',
@@ -126,14 +124,13 @@ export default function PairingModal({ onClose }: PairingModalProps) {
                                 <QRCodeSVG value={JSON.stringify(pairingData)} size={240} marginSize={4} />
                             ) : (
                                 <QRCodeSVG
-                                    value={`http://${pairingData.ip}:5000/?secret=${pairingData.secret}`}
+                                    value={`http://${pairingData.ip}:5000/#secret=${pairingData.secret}`}
                                     size={240}
                                     marginSize={4}
                                 />
                             )}
                         </div>
 
-                        {/* Szczegóły tekstowe do ręcznego wpisania w razie problemów z kamerą */}
                         <div
                             style={{
                                 backgroundColor: '#0f172a',
@@ -147,7 +144,7 @@ export default function PairingModal({ onClose }: PairingModalProps) {
                             }}
                         >
                             <div style={{ marginBottom: '6px' }}>
-                                <strong style={{ color: '#e2e8f0' }}>IP serwera:</strong>{' '}
+                                <strong style={{ color: '#e2e8f0' }}>Server IP:</strong>{' '}
                                 <span style={{ color: '#2ecc71', fontFamily: 'monospace' }}>{pairingData.ip}</span>
                             </div>
                             <div
@@ -159,7 +156,7 @@ export default function PairingModal({ onClose }: PairingModalProps) {
                                 }}
                             >
                                 <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                    <strong style={{ color: '#e2e8f0' }}>Klucz:</strong>{' '}
+                                    <strong style={{ color: '#e2e8f0' }}>Key:</strong>{' '}
                                     <span style={{ color: '#cbd5e1', fontFamily: 'monospace' }}>
                                         {pairingData.secret.slice(0, 16)}...
                                     </span>
@@ -178,11 +175,11 @@ export default function PairingModal({ onClose }: PairingModalProps) {
                                         flexShrink: 0,
                                     }}
                                 >
-                                    {copied ? '✓ Skopiowano' : 'Kopiuj klucz'}
+                                    {copied ? 'Copied' : 'Copy key'}
                                 </button>
                             </div>
                             <div style={{ marginTop: '6px', fontSize: '11px', color: '#64748b' }}>
-                                💡 Jeśli aparat ma problem z odczytem, wpisz IP i klucz w aplikacji: Ustawienia → Opcje zaawansowane.
+                                {'Note: If camera cannot scan, enter the IP and key manually: Settings -> Advanced Options.'}
                             </div>
                         </div>
                     </div>
@@ -201,7 +198,7 @@ export default function PairingModal({ onClose }: PairingModalProps) {
                         fontSize: '14px',
                     }}
                 >
-                    Zamknij
+                    Close
                 </button>
             </div>
         </div>

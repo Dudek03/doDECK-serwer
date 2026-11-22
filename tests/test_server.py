@@ -23,6 +23,13 @@ class TestServer(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         mock_send_static.assert_called_once_with("index.html")
 
+    @patch("serwer.app.send_static_file")
+    def test_benchmark_route(self, mock_send_static):
+        mock_send_static.return_value = "<html>BENCHMARK</html>"
+        response = self.client.get("/benchmark")
+        self.assertEqual(response.status_code, 200)
+        mock_send_static.assert_called_once_with("benchmark.html")
+
     @patch("serwer.get_or_create_secret", return_value="test_secret_123")
     @patch("serwer.get_local_ip", return_value="192.168.1.100")
     def test_api_pairing_localhost(self, mock_ip, mock_secret):
@@ -40,7 +47,7 @@ class TestServer(unittest.TestCase):
             "/api/pairing", environ_base={"REMOTE_ADDR": "192.168.1.55"}
         )
         self.assertEqual(response.status_code, 403)
-        self.assertIn("Brak uprawnień", response.get_json()["error"])
+        self.assertIn("Unauthorized", response.get_json()["error"])
 
     def test_create_default_icon(self):
         img = create_default_icon()

@@ -36,7 +36,7 @@ export default function Header({
 
                 {profileStack.length > 0 && (
                     <button className="btn btn-blue" onClick={onGoBack} style={{ marginRight: 10 }}>
-                        ⬅ Wstecz
+                        Back
                     </button>
                 )}
 
@@ -52,32 +52,32 @@ export default function Header({
                     ))}
                 </select>
                 <button className="btn btn-dark" onClick={onAddProfile}>
-                    + Profil
+                    + Profile
                 </button>
-                <button className="btn btn-red" onClick={onDeleteProfile} title="Usuń obecny profil">
-                    - Usuń
+                <button className="btn btn-red" onClick={onDeleteProfile} title="Delete current profile">
+                    - Delete
                 </button>
             </div>
 
             <div className="header-right">
                 {isEditMode && (
                     <button className="btn btn-blue" onClick={onAddTile}>
-                        + Kafelek
+                        + Tile
                     </button>
                 )}
                 <button
                     className={`btn ${isEditMode ? 'btn-red' : 'btn-gray'}`}
                     onClick={onToggleEdit}
                 >
-                    {isEditMode ? 'Wyłącz Edycję' : 'Tryb Edycji'}
+                    {isEditMode ? 'Exit Edit Mode' : 'Edit Mode'}
                 </button>
                 {isEditMode && (
                     <button className="btn btn-green" onClick={onSave}>
-                        Zapisz układ
+                        Save Layout
                     </button>
                 )}
                 <button className="btn btn-dark" onClick={onOpenPairing} style={{ marginRight: 15 }}>
-                    Paruj
+                    Pair
                 </button>
             </div>
         </div>

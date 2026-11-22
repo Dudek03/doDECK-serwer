@@ -1,6 +1,8 @@
 import json
 from contextlib import contextmanager
-from flask import Blueprint, jsonify, request
+from typing import Any, Dict, Generator, List, Optional, Tuple, Union
+from flask import Blueprint, jsonify, request, Response
+from flask_socketio import SocketIO
 from pycaw.pycaw import (
     AudioUtilities,
     ISimpleAudioVolume,
@@ -15,8 +17,8 @@ audio_bp = Blueprint("audio", __name__)
 
 
 @contextmanager
-def com_context():
-    """Zarządza cyklem życia COM, gwarantując wywołanie CoUninitialize."""
+def com_context() -> Generator[None, None, None]:
+    """Manages COM lifecycle, ensuring CoUninitialize is called."""
     should_uninit = False
     try:
         comtypes.CoInitialize()
@@ -34,9 +36,9 @@ def com_context():
 
 
 @audio_bp.route("/getAppsVolume", methods=["GET"])
-def getAudioVolume():
+def getAudioVolume() -> Tuple[Response, int]:
     try:
-        apps = []
+        apps: List[Dict[str, Any]] = []
         with com_context():
             sessions = AudioUtilities.GetAllSessions()
             for session in sessions:
@@ -55,28 +57,33 @@ def getAudioVolume():
                                 }
                             )
                     except Exception as inner_e:
-                        print(f"[WARN] error: {inner_e}")
+                        print(f"[WARN] Error reading session: {inner_e}")
                         continue
-        return jsonify({"ilosc": len(apps), "aplikacje": apps}), 200
+        return jsonify({
+            "count": len(apps),
+            "apps": apps,
+            "ilosc": len(apps),
+            "aplikacje": apps,
+        }), 200
     except Exception as outer_e:
-        print(f"[ERROR] Główny wyjątek: {outer_e}")
+        print(f"[ERROR] Main audio exception: {outer_e}")
         return jsonify({"error": str(outer_e)}), 500
 
 
 @audio_bp.route("/setAppVolume", methods=["POST"])
-def setAppVolume():
+def setAppVolume() -> Tuple[Response, int]:
     try:
         data = request.get_json(silent=True) or {}
         app_name = data.get("app")
         volume_value = data.get("volume")
 
         if not app_name or volume_value is None:
-            return jsonify({"error": "Brak wymaganych danych"}), 400
+            return jsonify({"error": "Missing required data"}), 400
 
         try:
-            volume_value = max(0, min(100, int(round(float(volume_value))))) / 100.0
+            parsed_volume: float = max(0, min(100, int(round(float(volume_value))))) / 100.0
         except (ValueError, TypeError):
-            return jsonify({"error": "Niepoprawna wartość głośności"}), 400
+            return jsonify({"error": "Invalid volume value"}), 400
 
         found = False
         target = str(app_name).lower().strip()
@@ -98,8 +105,8 @@ def setAppVolume():
                 ):
                     try:
                         volume = session._ctl.QueryInterface(ISimpleAudioVolume)
-                        volume.SetMasterVolume(volume_value, None)
-                        if volume_value > 0:
+                        volume.SetMasterVolume(parsed_volume, None)
+                        if parsed_volume > 0:
                             try:
                                 if volume.GetMute():
                                     volume.SetMute(0, None)
@@ -107,24 +114,28 @@ def setAppVolume():
                                 pass
                         found = True
                     except Exception as e:
-                        print(f"[WARN] Nie udało się ustawić: {e}")
+                        print(f"[WARN] Failed to set volume: {e}")
                         continue
 
         if found:
             return jsonify(
-                {"status": "OK", "ustawiona_głośność": int(volume_value * 100)}
+                {
+                    "status": "OK",
+                    "set_volume": int(parsed_volume * 100),
+                    "ustawiona_głośność": int(parsed_volume * 100),
+                }
             ), 200
         else:
             return jsonify(
-                {"error": f"Nie znaleziono aplikacji: {app_name}"},
+                {"error": f"Application not found: {app_name}"},
             ), 404
     except Exception as e:
-        print(f"[ERROR] {e}")
+        print(f"[ERROR] setAppVolume error: {e}")
         return jsonify({"error": str(e)}), 500
 
 
 @audio_bp.route("/muteAllApps", methods=["GET"])
-def muteAllApps():
+def muteAllApps() -> Tuple[Response, int]:
     try:
         with com_context():
             devices = AudioUtilities.GetSpeakers()
@@ -142,7 +153,7 @@ def muteAllApps():
 
 
 @audio_bp.route("/mic3", methods=["GET"])
-def mic3():
+def mic3() -> Tuple[Response, int]:
     try:
         WM_APPCOMMAND = 0x319
         APPCOMMAND_MICROPHONE_VOLUME_MUTE = 0x180000
@@ -155,8 +166,8 @@ def mic3():
         return jsonify({"error: ": str(e)}), 500
 
 
-def get_session_audio_data(session):
-    """Pobiera dane audio dla pojedynczej sesji. Zwraca słownik lub None."""
+def get_session_audio_data(session: Any) -> Optional[Dict[str, Any]]:
+    """Retrieves audio data for a single session. Returns dict or None."""
     if not session.Process:
         return None
 
@@ -177,12 +188,12 @@ def get_session_audio_data(session):
         return None
 
 
-def register_audio_events(socketio):
+def register_audio_events(socketio: SocketIO) -> None:
     @socketio.on("get_audio_volume")
-    def handle_get_audio():
-        """Zwraca listę aplikacji z ich głośnością przez WebSocket"""
+    def handle_get_audio() -> None:
+        """Returns list of applications with their volume levels via WebSocket."""
         try:
-            apps = []
+            apps: List[Dict[str, Any]] = []
             with com_context():
                 sessions = AudioUtilities.GetAllSessions()
                 for session in sessions:
@@ -193,16 +204,18 @@ def register_audio_events(socketio):
             socketio.emit(
                 "audio_volume_data",
                 {
+                    "count": len(apps),
+                    "apps": apps,
                     "ilosc": len(apps),
                     "aplikacje": apps,
                 },
             )
         except Exception as e:
-            print(f"[WS] Błąd pobierania audio: {e}")
+            print(f"[WS] Error fetching audio: {e}")
 
     @socketio.on("set_audio_volume")
-    def handle_set_audio(data):
-        """Ustawia głośność danej aplikacji z suwaka"""
+    def handle_set_audio(data: Union[str, Dict[str, Any]]) -> None:
+        """Sets the volume of a given application from a slider."""
         try:
             if isinstance(data, str):
                 try:
@@ -220,7 +233,7 @@ def register_audio_events(socketio):
                 return
 
             try:
-                volume_value = max(0, min(100, int(round(float(volume_value))))) / 100.0
+                parsed_volume: float = max(0, min(100, int(round(float(volume_value))))) / 100.0
             except (ValueError, TypeError):
                 return
 
@@ -243,8 +256,8 @@ def register_audio_events(socketio):
                     ):
                         try:
                             volume = session._ctl.QueryInterface(ISimpleAudioVolume)
-                            volume.SetMasterVolume(volume_value, None)
-                            if volume_value > 0:
+                            volume.SetMasterVolume(parsed_volume, None)
+                            if parsed_volume > 0:
                                 try:
                                     if volume.GetMute():
                                         volume.SetMute(0, None)
@@ -253,10 +266,10 @@ def register_audio_events(socketio):
                         except Exception:
                             continue
         except Exception as e:
-            print(f"[WS] Błąd ustawiania głośności: {e}")
+            print(f"[WS] Error setting volume: {e}")
 
     @socketio.on("toggle_mute_all")
-    def handle_toggle_mute_all():
+    def handle_toggle_mute_all() -> None:
         try:
             with com_context():
                 devices = AudioUtilities.GetSpeakers()
@@ -268,12 +281,12 @@ def register_audio_events(socketio):
                 volume = interface.QueryInterface(IAudioEndpointVolume)
                 mute = volume.GetMute()
                 volume.SetMute(bool(not mute), None)
-            print(f"[WS] Wykonano Mute All: {not mute}")
+            print(f"[WS] Mute All executed: {not mute}")
         except Exception as e:
-            print(f"[WS] Błąd wyciszania systemu: {e}")
+            print(f"[WS] Error muting system audio: {e}")
 
     @socketio.on("toggle_mic_mute")
-    def handle_toggle_mic():
+    def handle_toggle_mic() -> None:
         try:
             WM_APPCOMMAND = 0x319
             APPCOMMAND_MICROPHONE_VOLUME_MUTE = 0x180000
@@ -284,6 +297,6 @@ def register_audio_events(socketio):
                 None,
                 APPCOMMAND_MICROPHONE_VOLUME_MUTE,
             )
-            print("[WS] Wykonano Mute Mikrofonu")
+            print("[WS] Mic Mute executed")
         except Exception as e:
-            print(f"[WS] Błąd wyciszania mikrofonu: {e}")
+            print(f"[WS] Error muting microphone: {e}")
